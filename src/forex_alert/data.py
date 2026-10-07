@@ -68,7 +68,9 @@ def build_timeframes(m15: pd.DataFrame, as_of: pd.Timestamp | None = None) -> di
         now = now.tz_localize("UTC")
     else:
         now = now.tz_convert("UTC")
-    frames["M15"] = frames["M15"].loc[frames["M15"].index <= now.floor("15min")]
-    frames["H1"] = frames["H1"].loc[frames["H1"].index <= now.floor("1h")]
-    frames["H4"] = frames["H4"].loc[frames["H4"].index <= now.floor("4h")]
+    for tf, freq in (("M15", "15min"), ("H1", "1h"), ("H4", "4h")):
+        cutoff = now.floor(freq)
+        if now != cutoff:
+            cutoff -= pd.Timedelta(freq)
+        frames[tf] = frames[tf].loc[frames[tf].index <= cutoff]
     return frames
