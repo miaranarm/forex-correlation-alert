@@ -7,6 +7,8 @@ from .scoring import trend_direction, score_signal, relationship_alignment, time
 from .state import load_state, classify, save_state
 from .report import write_reports
 from .alerts import emit
+from pathlib import Path
+import json
 
 
 def _trade_levels(price, direction, strategy):
@@ -21,6 +23,17 @@ def _trade_levels(price, direction, strategy):
         "tp2": round(float(tp2), 6),
         "trailing_stop": f"{strategy['trailing_stop_pct']:.2%}",
     }
+
+
+def _strategy_gate_enabled():
+    path = Path("results/strategy_gate.json")
+    if not path.exists():
+        return False
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return bool(payload.get("enabled", False))
+    except (OSError, ValueError, TypeError):
+        return False
 
 
 def run():
@@ -121,7 +134,8 @@ def run():
     alerts.sort(key=lambda x: (x["score"], x["stability"]), reverse=True)
     write_reports(alerts, cleared)
     save_state(alerts)
-    if cfg.get("alerts", {}).get("enabled", True):
+    alerts_enabled = cfg.get("alerts", {}).get("enabled", True) and _strategy_gate_enabled()
+    if alerts_enabled:
         emit(alerts)
     else:
         print("Trade alerts disabled until strategy validation passes.")
