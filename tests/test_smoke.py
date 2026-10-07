@@ -74,3 +74,37 @@ def test_forward_outcomes_ignore_missing_prices():
 
     assert rows[0]["relationship_correct_4h"] is None
     assert rows[0]["spread_4h"] is None
+
+
+def test_fetch_15m_retries_transient_provider_failure(monkeypatch):
+    import pandas as pd
+    from forex_alert import data
+
+    calls = {"n": 0}
+
+    class Response:
+        def raise_for_status(self):
+            if calls["n"] == 1:
+                raise RuntimeError("temporary failure")
+
+        def json(self):
+            return {
+                "chart": {
+                    "result": [{
+                        "timestamp": [1_700_000_000],
+                        "indicators": {"quote": [{"close": [1.0]}]},
+                    }]
+                }
+            }
+
+    def fake_get(*args, **kwargs):
+        calls["n"] += 1
+        return Response()
+
+    monkeypatch.setattr(data.requests, "get", fake_get)
+    monkeypatch.setattr(data.time, "sleep", lambda *_: None)
+
+    out = data.fetch_15m("EURUSD", period_days=1, timeout=1, retries=2)
+    assert calls["n"] == 2
+    assert isinstance(out, pd.DataFrame)
+    assert out.iloc[0, 0] == 1.0
