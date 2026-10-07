@@ -127,7 +127,7 @@ def test_build_timeframes_excludes_incomplete_bars():
 
     assert frames["M15"].index.max() == pd.Timestamp("2026-10-07 01:45:00", tz="UTC")
     assert frames["H1"].index.max() == pd.Timestamp("2026-10-07 01:00:00", tz="UTC")
-    assert frames["H4"].index.max() == pd.Timestamp("2026-10-07 00:00:00", tz="UTC")
+    assert frames["H4"].empty
 
 
 def test_build_timeframes_normalizes_naive_as_of_to_utc():
