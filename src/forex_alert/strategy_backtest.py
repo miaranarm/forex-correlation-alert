@@ -65,13 +65,7 @@ def _signal_at(frames, ts, a, b, cfg, weights):
     z_entry = min(float(cfg["strategy"].get("z_entry", 1.5)), 1.25)
     if abs(zscore) < z_entry:
         return None
-    signal_mode = cfg["strategy"].get("signal_mode", "mean_reversion")
-    if signal_mode == "momentum":
-        direction_a = "LONG" if zscore > z_entry else "SHORT"
-    else:
-        direction_a = "SHORT" if zscore > z_entry else "LONG"
     return {
-        "direction_a": direction_a,
         "score": score,
         "correlation_h4": corrs["H4"],
         "confluence": confluence,
@@ -155,7 +149,9 @@ def run():
     train_end = int(len(timestamps) * 0.60)
     test_end = int(len(timestamps) * 0.80)
     rows = []
-    next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
+    # Raw candidate events are kept independent of signal direction and exit simulation.
+    # Direction is derived inside each TRAIN-only candidate and again after the
+    # selected strategy is frozen, so mean-reversion vs momentum is a real comparison.
 
     # H4 is the mandatory primary filter. Precompute eligible pairs once per
     # completed H4 bar, then evaluate only those candidates on M15. This
@@ -183,18 +179,12 @@ def run():
             if entries.empty:
                 continue
             entry_ts = entries.index[0]
-            if entry_ts < next_free[a]:
-                continue
-            exit_data = m15.loc[m15.index >= entry_ts, a].dropna()
-            exit_type, r, tp1 = _simulate(exit_data, sig["direction_a"], cfg)
-            max_bars = int(cfg["strategy"].get("max_bars", len(exit_data)))
-            next_free[a] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
             rows.append({
                 "signal_ts": ts.isoformat(), "entry_ts": entry_ts.isoformat(), "pair": a,
-                "direction": sig["direction_a"], "entry": float(entries.iloc[0]),
+                "entry": float(entries.iloc[0]),
                 "score": sig["score"], "correlation_h4": round(float(sig["correlation_h4"]), 4),
                 "confluence": sig["confluence"], "spread_zscore": sig["spread_zscore"],
-                "hedge_beta": sig["hedge_beta"], "exit": exit_type, "r": r, "tp1": tp1,
+                "hedge_beta": sig["hedge_beta"],
                 "sample": "TRAIN" if idx < train_end else ("TEST" if idx < test_end else "HOLDOUT"),
             })
     raw = pd.DataFrame(rows)
@@ -234,8 +224,10 @@ def run():
             pair = sig["pair"]
             if entry_ts < next_free[pair]:
                 continue
+            z = float(sig["spread_zscore"])
+            direction = ("LONG" if z > 0 else "SHORT") if signal_mode == "momentum" else ("SHORT" if z > 0 else "LONG")
             exit_data = m15.loc[m15.index >= entry_ts, pair].dropna()
-            exit_type, r, tp1_hit = _simulate(exit_data, sig["direction"], candidate_cfg)
+            exit_type, r, tp1_hit = _simulate(exit_data, direction, candidate_cfg)
             max_bars = int(candidate_cfg["strategy"].get("max_bars", len(exit_data)))
             next_free[pair] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
             trade_rows.append({"r": r, "tp1": tp1_hit})
@@ -259,12 +251,15 @@ def run():
         pair = sig["pair"]
         if entry_ts < next_free[pair]:
             continue
+        z = float(sig["spread_zscore"])
+        mode = selected_strategy.get("signal_mode", "mean_reversion")
+        direction = ("LONG" if z > 0 else "SHORT") if mode == "momentum" else ("SHORT" if z > 0 else "LONG")
         exit_data = m15.loc[m15.index >= entry_ts, pair].dropna()
-        exit_type, r, tp1_hit = _simulate(exit_data, sig["direction"], selected_cfg)
+        exit_type, r, tp1_hit = _simulate(exit_data, direction, selected_cfg)
         max_bars = int(selected_strategy.get("max_bars", len(exit_data)))
         next_free[pair] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
         item = sig.to_dict()
-        item.update({"exit": exit_type, "r": r, "tp1": tp1_hit})
+        item.update({"direction": direction, "exit": exit_type, "r": r, "tp1": tp1_hit})
         final_rows.append(item)
 
     df = pd.DataFrame(final_rows)
