@@ -38,7 +38,7 @@ def run():
     for i, a in enumerate(available_pairs):
         for b in available_pairs[i + 1:]:
             corrs = {tf: pair_correlation(frames[tf], a, b, timeframe_windows[tf], min_obs) for tf in ("H4", "H1", "M15")}
-            if any(math.isnan(corrs[tf]) for tf in corrs) or abs(corrs["H4"]) < threshold:
+            if any(pd.isna(corrs[tf]) for tf in corrs) or abs(corrs["H4"]) < threshold:
                 continue
             regime = rolling_correlation(frames["H4"], a, b, window, corr_cfg["short_window"], min_obs)
             if not regime:
