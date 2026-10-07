@@ -6,7 +6,7 @@ on:
     - cron: "*/30 * * * *"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   alert:
@@ -28,7 +28,22 @@ jobs:
       - name: Run tests
         run: pytest -q
 
-      - name: Run correlation alert
+      - name: Run correlation alert engine
         run: python -m forex_alert.main
         env:
           PYTHONPATH: src
+
+      - name: Persist alert state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results/alert_state.json
+          git diff --cached --quiet || git commit -m "chore: update alert state"
+          git push
+
+      - name: Upload alert report
+        uses: actions/upload-artifact@v4
+        with:
+          name: forex-alert-report
+          path: results/
+          if-no-files-found: warn
