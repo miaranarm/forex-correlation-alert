@@ -6,23 +6,9 @@ correlation:
 
 timeframes:
   primary: H4
-  confirmation:
-    - H1
-    - M15
+  confirmation: [H1, M15]
 
-pairs:
-  - EURUSD
-  - GBPUSD
-  - USDJPY
-  - USDCHF
-  - AUDUSD
-  - NZDUSD
-  - USDCAD
-  - EURGBP
-  - EURJPY
-  - GBPJPY
-  - AUDJPY
-  - CHFJPY
+pairs: [EURUSD, GBPUSD, USDJPY, USDCHF, AUDUSD, NZDUSD, USDCAD, EURGBP, EURJPY, GBPJPY, AUDJPY, CHFJPY]
 
 scoring:
   correlation_weight: 40
@@ -36,5 +22,6 @@ alerts:
   console: true
 
 data:
-  provider: stooq
+  provider: yahoo_chart
+  period_days: 30
   request_timeout_seconds: 20
