@@ -35,3 +35,4 @@ data:
   provider: yahoo_chart
   period_days: 59
   request_timeout_seconds: 20
+  minimum_available_pairs: 8
