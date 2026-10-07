@@ -1,38 +1,29 @@
 {
   "EURUSD|GBPUSD": {
-    "score": 100.0
-  },
-  "EURUSD|AUDUSD": {
-    "score": 100.0
-  },
-  "EURUSD|NZDUSD": {
-    "score": 100.0
-  },
-  "EURUSD|USDCAD": {
-    "score": 100.0
-  },
-  "GBPUSD|AUDUSD": {
-    "score": 100.0
-  },
-  "GBPUSD|NZDUSD": {
-    "score": 100.0
-  },
-  "GBPUSD|USDCAD": {
-    "score": 100.0
-  },
-  "USDJPY|GBPJPY": {
-    "score": 100.0
-  },
-  "AUDUSD|NZDUSD": {
-    "score": 100.0
-  },
-  "AUDUSD|USDCAD": {
-    "score": 100.0
-  },
-  "NZDUSD|USDCAD": {
-    "score": 100.0
+    "score": 84.03
   },
   "EURJPY|AUDJPY": {
-    "score": 100.0
+    "score": 83.99
+  },
+  "AUDUSD|NZDUSD": {
+    "score": 75.48
+  },
+  "USDJPY|GBPJPY": {
+    "score": 71.7
+  },
+  "EURUSD|AUDUSD": {
+    "score": 71.19
+  },
+  "GBPUSD|NZDUSD": {
+    "score": 70.33
+  },
+  "EURUSD|NZDUSD": {
+    "score": 70.05
+  },
+  "GBPUSD|AUDUSD": {
+    "score": 70.04
+  },
+  "EURUSD|USDCAD": {
+    "score": 65.44
   }
 }
