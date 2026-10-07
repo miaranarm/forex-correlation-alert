@@ -14,8 +14,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: forex-correlation-alert-${{ github.ref }}
-  cancel-in-progress: true
+  group: forex-correlation-automation-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   alert:
