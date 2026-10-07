@@ -1,4 +1,5 @@
 name: Forex Signal Strategy Backtest
+# Trigger strategy validation after executable M15 timeframe update.
 
 on:
   workflow_dispatch:
