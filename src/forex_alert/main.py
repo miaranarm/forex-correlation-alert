@@ -20,6 +20,10 @@ def run():
     if len(series) < 2:
         raise RuntimeError("Not enough market data.")
 
+    available_pairs = [pair for pair in cfg["pairs"] if any(pair in frame.columns for frame in series)]
+    if len(available_pairs) < 2:
+        raise RuntimeError("Not enough market data after provider failures.")
+
     frames = build_timeframes(pd.concat(series, axis=1).dropna())
     corr_cfg = cfg["correlation"]
     window = corr_cfg["window"]
@@ -31,8 +35,8 @@ def run():
     weights = {"correlation": cfg["scoring"]["correlation_weight"], "h4": cfg["scoring"]["h4_weight"], "h1": cfg["scoring"]["h1_weight"], "m15": cfg["scoring"]["m15_weight"]}
 
     alerts = []
-    for i, a in enumerate(cfg["pairs"]):
-        for b in cfg["pairs"][i + 1:]:
+    for i, a in enumerate(available_pairs):
+        for b in available_pairs[i + 1:]:
             corrs = {tf: pair_correlation(frames[tf], a, b, timeframe_windows[tf], min_obs) for tf in ("H4", "H1", "M15")}
             if any(math.isnan(corrs[tf]) for tf in corrs) or abs(corrs["H4"]) < threshold:
                 continue
