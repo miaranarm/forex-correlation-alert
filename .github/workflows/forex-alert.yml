@@ -4,12 +4,18 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "results/**"
   workflow_dispatch:
   schedule:
     - cron: "*/30 * * * *"
 
 permissions:
   contents: write
+
+concurrency:
+  group: forex-correlation-alert-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   alert:
