@@ -121,7 +121,10 @@ def run():
     alerts.sort(key=lambda x: (x["score"], x["stability"]), reverse=True)
     write_reports(alerts, cleared)
     save_state(alerts)
-    emit(alerts)
+    if cfg.get("alerts", {}).get("enabled", True):
+        emit(alerts)
+    else:
+        print("Trade alerts disabled until strategy validation passes.")
     for key in cleared:
         print(f"- CLEARED {key}")
 
