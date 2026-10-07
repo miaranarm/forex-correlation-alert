@@ -24,7 +24,10 @@ def run():
     if len(available_pairs) < 2:
         raise RuntimeError("Not enough market data after provider failures.")
 
-    # Preserve pair-level history across provider gaps; correlation functions\n    # perform their own pairwise missing-observation filtering.\n    frames = build_timeframes(pd.concat(series, axis=1).sort_index())\n    corr_cfg = cfg["correlation"]
+    # Preserve pair-level history across provider gaps; correlation functions
+    # perform their own pairwise missing-observation filtering.
+    frames = build_timeframes(pd.concat(series, axis=1).sort_index())
+    corr_cfg = cfg["correlation"]
     window = corr_cfg["window"]
     timeframe_windows = corr_cfg.get("timeframe_windows", {"H4": window, "H1": window, "M15": window})
     threshold = corr_cfg["threshold"]
