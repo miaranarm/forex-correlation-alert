@@ -1,5 +1,5 @@
 name: Forex Signal Strategy Backtest
-# Trigger strategy validation after executable M15 timeframe update.
+# Trigger strategy validation with the current long-history Dukascopy configuration.
 
 on:
   workflow_dispatch:
