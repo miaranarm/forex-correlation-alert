@@ -1,6 +1,6 @@
 {
   "enabled": false,
-  "validated_at": "2026-10-07T14:12:27.534739+00:00",
+  "validated_at": "2026-10-07T14:22:05.224796+00:00",
   "checks": {
     "minimum_oos_trades": false,
     "minimum_oos_profit_factor": false,
@@ -9,10 +9,10 @@
   "oos": {
     "trades": 11,
     "win_rate": 0.1818,
-    "profit_factor": 0.122,
-    "expectancy_r": -1.2175,
-    "total_r": -13.392,
-    "max_drawdown_r": -8.3599,
+    "profit_factor": 0.1221,
+    "expectancy_r": -1.2162,
+    "total_r": -13.3785,
+    "max_drawdown_r": -8.3464,
     "tp1_rate": 0.2727
   }
 }
