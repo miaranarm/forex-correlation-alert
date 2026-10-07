@@ -168,6 +168,7 @@ def run_backtest():
 
     corr_cfg = cfg["correlation"]
     window = corr_cfg["window"]
+    timeframe_windows = corr_cfg.get("timeframe_windows", {"H4": window, "H1": window, "M15": window})
     min_obs = corr_cfg.get("min_observations", 60)
     weights = {
         "correlation": cfg["scoring"]["correlation_weight"],
