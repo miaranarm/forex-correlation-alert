@@ -126,7 +126,7 @@ def test_build_timeframes_excludes_incomplete_bars():
     frames = build_timeframes(m15, as_of=pd.Timestamp("2026-10-07 02:07:00", tz="UTC"))
 
     assert frames["M15"].index.max() == pd.Timestamp("2026-10-07 01:45:00", tz="UTC")
-    assert frames["H1"].index.max() == pd.Timestamp("2026-10-07 02:00:00", tz="UTC")
+    assert frames["H1"].index.max() == pd.Timestamp("2026-10-07 01:00:00", tz="UTC")
     assert frames["H4"].index.max() == pd.Timestamp("2026-10-07 00:00:00", tz="UTC")
 
 
