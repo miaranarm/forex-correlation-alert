@@ -1,0 +1,38 @@
+{
+  "EURUSD|GBPUSD": {
+    "score": 100.0
+  },
+  "EURUSD|AUDUSD": {
+    "score": 100.0
+  },
+  "EURUSD|NZDUSD": {
+    "score": 100.0
+  },
+  "EURUSD|USDCAD": {
+    "score": 100.0
+  },
+  "GBPUSD|AUDUSD": {
+    "score": 100.0
+  },
+  "GBPUSD|NZDUSD": {
+    "score": 100.0
+  },
+  "GBPUSD|USDCAD": {
+    "score": 100.0
+  },
+  "USDJPY|GBPJPY": {
+    "score": 100.0
+  },
+  "AUDUSD|NZDUSD": {
+    "score": 100.0
+  },
+  "AUDUSD|USDCAD": {
+    "score": 100.0
+  },
+  "NZDUSD|USDCAD": {
+    "score": 100.0
+  },
+  "EURJPY|AUDJPY": {
+    "score": 100.0
+  }
+}
