@@ -78,6 +78,7 @@ def _evaluate_snapshot(
             aligns["M15"],
             weights,
             threshold,
+            discriminating=True,
         )
         if score < score_cfg["minimum_alert_score"]:
             return None
