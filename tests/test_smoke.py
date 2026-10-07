@@ -20,6 +20,19 @@ def test_stability_empty():
     assert correlation_stability(x,"a","b",window=10,segments=4)==0.0
 
 
+def test_stability_penalizes_sign_instability():
+    import pandas as pd
+    from forex_alert.correlation import correlation_stability
+
+    returns_a = [1, 2, 3, 4] * 24
+    returns_b = returns_a[:48] + [-x for x in returns_a[48:]]
+    prices_a = pd.Series(100.0).append(pd.Series(returns_a).cumsum() + 100.0, ignore_index=True)
+    prices_b = pd.Series(100.0).append(pd.Series(returns_b).cumsum() + 100.0, ignore_index=True)
+    x = pd.DataFrame({"a": prices_a, "b": prices_b})
+
+    assert correlation_stability(x, "a", "b", window=96, segments=4, min_observations=60) < 0.70
+
+
 def test_pair_correlation_rejects_insufficient_observations():
     import pandas as pd
     from forex_alert.correlation import pair_correlation
