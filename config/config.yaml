@@ -1,6 +1,10 @@
 correlation:
   threshold: 0.65
   window: 96
+  short_window: 24
+  stability_segments: 4
+  minimum_stability: 0.70
+  maximum_regime_drift: 0.25
   method: pearson
   min_observations: 60
   primary_requires_threshold: true
