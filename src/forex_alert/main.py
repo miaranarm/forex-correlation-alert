@@ -47,7 +47,7 @@ def run():
             confluence = timeframe_confluence((aligns["H4"], aligns["H1"], aligns["M15"]))
             if not confluence_meets_minimum(confluence, cfg["scoring"]["minimum_confluence"]):
                 continue
-            score = score_signal(corrs["H4"], aligns["H4"], aligns["H1"], aligns["M15"], weights, threshold)
+            score = score_signal(corrs["H4"], aligns["H4"], aligns["H1"], aligns["M15"], weights, threshold, discriminating=True)
             if score < cfg["scoring"]["minimum_alert_score"]:
                 continue
             alerts.append({"pair_a": a, "pair_b": b, "correlation_h4": round(corrs["H4"], 4), "correlation_h1": round(corrs["H1"], 4), "correlation_m15": round(corrs["M15"], 4), "h4_alignment": aligns["H4"], "h1_alignment": aligns["H1"], "m15_alignment": aligns["M15"], "confluence": confluence, "stability": stability, "h4_short_correlation": round(regime["short"], 4), "h4_long_correlation": round(regime["long"], 4), "regime_drift": round(regime["spread"], 4), "score": score})
