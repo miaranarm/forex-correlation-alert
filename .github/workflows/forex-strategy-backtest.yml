@@ -60,6 +60,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add results/strategy_gate.json
           git diff --cached --quiet || git commit -m "chore: update strategy validation gate"
+          git pull --rebase origin main
           git push
       - name: Validate out-of-sample robustness
         shell: python
