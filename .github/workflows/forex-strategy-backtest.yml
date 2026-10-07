@@ -34,6 +34,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
+      - name: Install historical data client
+        run: npm install --no-audit --no-fund
       - run: pytest -q
       - name: Run executable strategy backtest
         run: python -m forex_alert.strategy_backtest
