@@ -60,3 +60,17 @@ def test_timeframe_windows_preserve_16_day_horizon():
     windows = cfg["correlation"]["timeframe_windows"]
     assert windows["H4"] * 4 == windows["H1"]
     assert windows["H4"] * 16 == windows["M15"]
+
+
+def test_forward_outcomes_ignore_missing_prices():
+    import pandas as pd
+    from forex_alert.backtest import _add_forward_outcomes
+
+    h4 = pd.DataFrame(
+        {"a": [100.0, float("nan"), 102.0], "b": [100.0, 101.0, float("nan")]}
+    )
+    rows = [{"pair_a": "a", "pair_b": "b", "correlation_h4": 0.80}]
+    _add_forward_outcomes(rows, h4, 0)
+
+    assert rows[0]["relationship_correct_4h"] is None
+    assert rows[0]["spread_4h"] is None
