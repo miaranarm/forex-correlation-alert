@@ -21,8 +21,12 @@ def run():
         raise RuntimeError("Not enough market data.")
 
     available_pairs = [pair for pair in cfg["pairs"] if any(pair in frame.columns for frame in series)]
-    if len(available_pairs) < 2:
-        raise RuntimeError("Not enough market data after provider failures.")
+    minimum_available_pairs = cfg["data"].get("minimum_available_pairs", 8)
+    if len(available_pairs) < minimum_available_pairs:
+        raise RuntimeError(
+            f"Insufficient market coverage: {len(available_pairs)}/{len(cfg['pairs'])} pairs available; "
+            f"minimum is {minimum_available_pairs}."
+        )
 
     # Preserve pair-level history across provider gaps; correlation functions
     # perform their own pairwise missing-observation filtering.
