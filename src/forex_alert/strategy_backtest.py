@@ -32,11 +32,44 @@ def _signal_at(frames, ts, a, b, cfg, weights):
     score = score_signal(corrs["H4"], aligns["H4"], aligns["H1"], aligns["M15"], weights, cc["threshold"], discriminating=True)
     if score < sc["minimum_alert_score"]:
         return None
+    # Relative-value signal: trade pair A toward the correlation-implied relationship
+    # when the H4 spread is statistically stretched. Inputs are available only through ts.
+    h4 = snap["H4"][[a, b]].dropna()
+    if len(h4) < cc["window"]:
+        return None
+    import numpy as np
+    logp = np.log(h4)
+    ret = logp.diff().dropna()
+    if len(ret) < cc["window"] - 1:
+        return None
+    min_beta_obs = max(30, cc["min_observations"] - 1)
+    cov = ret[a].rolling(cc["window"] - 1, min_periods=min_beta_obs).cov(ret[b])
+    var = ret[b].rolling(cc["window"] - 1, min_periods=min_beta_obs).var()
+    beta_series = cov / var
+    beta_value = float(beta_series.iloc[-1]) if pd.notna(beta_series.iloc[-1]) else 1.0
+    if abs(beta_value) > 3.0 or abs(beta_value) < 0.10:
+        return None
+    spread = logp[a] - beta_value * logp[b]
+    lookback = int(cfg["strategy"].get("spread_window", cc["window"]))
+    if len(spread) < lookback:
+        return None
+    min_spread_obs = max(30, lookback // 2)
+    mean = spread.rolling(lookback, min_periods=min_spread_obs).mean().iloc[-1]
+    std = spread.rolling(lookback, min_periods=min_spread_obs).std(ddof=0).iloc[-1]
+    if pd.isna(mean) or pd.isna(std) or std <= 0:
+        return None
+    zscore = float((spread.iloc[-1] - mean) / std)
+    z_entry = float(cfg["strategy"].get("z_entry", 1.5))
+    if abs(zscore) < z_entry:
+        return None
+    direction_a = "SHORT" if zscore > z_entry else "LONG"
     return {
-        "direction_a": "LONG" if dirs["H4"][0] > 0 else "SHORT",
+        "direction_a": direction_a,
         "score": score,
         "correlation_h4": corrs["H4"],
         "confluence": confluence,
+        "spread_zscore": zscore,
+        "hedge_beta": beta_value,
     }
 
 
@@ -129,7 +162,8 @@ def run():
                 "signal_ts": ts.isoformat(), "entry_ts": entry_ts.isoformat(), "pair": a,
                 "direction": sig["direction_a"], "entry": float(entries.iloc[0]),
                 "score": sig["score"], "correlation_h4": round(float(sig["correlation_h4"]), 4),
-                "confluence": sig["confluence"], "exit": exit_type, "r": r, "tp1": tp1,
+                "confluence": sig["confluence"], "spread_zscore": sig["spread_zscore"],
+                "hedge_beta": sig["hedge_beta"], "exit": exit_type, "r": r, "tp1": tp1,
                 "sample": "IS" if idx < split else "OOS",
             })
     df = pd.DataFrame(rows)
@@ -142,7 +176,7 @@ def run():
         "out_of_sample": _metrics(df[df["sample"] == "OOS"]) if not df.empty else {"trades": 0},
     }
     (out / "strategy_backtest_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    lines = ["# Forex Signal Strategy Backtest", "", "Close-based execution on completed M15 bars; no intrabar high/low assumption.", "Chronological 70/30 IS/OOS split; OOS is never used for parameter selection.", ""]
+    lines = ["# Forex Signal Strategy Backtest", "", "Relative-value execution on completed H4 relationship signals and next M15 close; no intrabar high/low assumption.", "The strategy trades pair A toward a statistically stretched correlation-implied spread.", "Chronological 70/30 IS/OOS split; OOS is never used for parameter selection.", ""]
     for name, metrics in (("All", summary["all"]), ("In-sample", summary["in_sample"]), ("Out-of-sample", summary["out_of_sample"])):
         lines += [f"## {name}", ""] + [f"- {k}: {v}" for k, v in metrics.items()] + [""]
     (out / "strategy_backtest_summary.md").write_text("\n".join(lines), encoding="utf-8")
