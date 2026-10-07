@@ -26,8 +26,8 @@ def test_stability_penalizes_sign_instability():
 
     returns_a = [1, 2, 3, 4] * 24
     returns_b = returns_a[:48] + [-x for x in returns_a[48:]]
-    prices_a = pd.Series(100.0).append(pd.Series(returns_a).cumsum() + 100.0, ignore_index=True)
-    prices_b = pd.Series(100.0).append(pd.Series(returns_b).cumsum() + 100.0, ignore_index=True)
+    prices_a = pd.concat([pd.Series([100.0]), pd.Series(returns_a).cumsum() + 100.0], ignore_index=True)
+    prices_b = pd.concat([pd.Series([100.0]), pd.Series(returns_b).cumsum() + 100.0], ignore_index=True)
     x = pd.DataFrame({"a": prices_a, "b": prices_b})
 
     assert correlation_stability(x, "a", "b", window=96, segments=4, min_observations=60) < 0.70
