@@ -8,7 +8,7 @@ import pandas as pd
 
 from .config import load_config
 from .data import fetch_15m, build_timeframes
-from .correlation import pair_correlation, rolling_correlation, correlation_stability
+from .correlation import pair_correlation, rolling_correlation, correlation_stability, correlation_matrix
 from .scoring import trend_direction, score_signal, relationship_alignment, timeframe_confluence, confluence_meets_minimum
 
 
@@ -151,8 +151,26 @@ def run():
     test_end = int(len(timestamps) * 0.80)
     rows = []
     next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
+
+    # H4 is the mandatory primary filter. Precompute eligible pairs once per
+    # completed H4 bar, then evaluate only those candidates on M15. This
+    # preserves chronology/no-lookahead while removing redundant calculations.
+    h4_index = frames["H4"].index
+    h4_candidates = {}
+    for h4_ts in h4_index:
+        h4_slice = frames["H4"].loc[:h4_ts]
+        matrix = correlation_matrix(h4_slice, cc["window"], cc["min_observations"])
+        h4_candidates[h4_ts] = [
+            (a, b) for a, b in combinations(available, 2)
+            if pd.notna(matrix.loc[a, b]) and abs(float(matrix.loc[a, b])) >= cc["threshold"]
+        ]
+
     for idx, ts in enumerate(timestamps):
-        for a, b in combinations(available, 2):
+        h4_pos = h4_index.searchsorted(ts, side="right") - 1
+        if h4_pos < 0:
+            continue
+        h4_ts = h4_index[h4_pos]
+        for a, b in h4_candidates.get(h4_ts, []):
             sig = _signal_at(frames, ts, a, b, cfg, weights)
             if not sig:
                 continue
