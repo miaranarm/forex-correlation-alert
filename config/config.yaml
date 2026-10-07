@@ -33,5 +33,5 @@ alerts:
 
 data:
   provider: yahoo_chart
-  period_days: 30
+  period_days: 60
   request_timeout_seconds: 20
