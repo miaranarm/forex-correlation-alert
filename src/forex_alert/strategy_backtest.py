@@ -61,7 +61,8 @@ def _signal_at(frames, ts, a, b, cfg, weights):
     if not np.isfinite(mean) or not np.isfinite(std) or std <= 0:
         return None
     zscore = float((residual.iloc[-1] - mean) / std)
-    # Generate the broadest candidate event set; the actual threshold is selected on TRAIN only.\n    z_entry = min(float(cfg["strategy"].get("z_entry", 1.5)), 1.25)
+    # Generate the broadest candidate event set; the actual threshold is selected on TRAIN only.
+    z_entry = min(float(cfg["strategy"].get("z_entry", 1.5)), 1.25)
     if abs(zscore) < z_entry:
         return None
     direction_a = "SHORT" if zscore > z_entry else "LONG"
