@@ -12,6 +12,7 @@ Le moteur combine une ancre **H4** avec des confirmations **H1/M15**, puis filtr
 - construction M15 → H1 → H4 avec bougies alignées sur leur clôture ;
 - corrélation de Pearson sur rendements ;
 - seuil configurable **|r| >= 0.65** ;
+- fenêtres de corrélation alignées sur une même durée de référence (~16 jours par défaut) : H4=96, H1=384, M15=1536 ;
 - H4 obligatoire comme timeframe primaire ;
 - contrôle de stabilité sur 4 segments ;
 - contrôle de dérive entre corrélation courte et longue ;
