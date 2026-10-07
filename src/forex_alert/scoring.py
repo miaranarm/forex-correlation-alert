@@ -7,7 +7,20 @@ def trend_direction(series, fast=20, slow=50):
 
 
 def correlation_quality(correlation, threshold=0.65):
-    return max(0.0, min(abs(correlation) / threshold, 1.0))
+    """
+    Convert correlation strength into a discriminating 0..1 quality score.
+
+    The threshold is the minimum acceptable correlation, so a value exactly
+    at the threshold receives 0 correlation points. A perfect correlation
+    receives the full correlation weight. This prevents every qualifying
+    alert from automatically receiving the maximum score.
+    """
+    magnitude = abs(correlation)
+    if magnitude <= threshold:
+        return 0.0
+    if threshold >= 1.0:
+        return 1.0 if magnitude >= 1.0 else 0.0
+    return min((magnitude - threshold) / (1.0 - threshold), 1.0)
 
 
 def relationship_alignment(correlation, direction_a, direction_b):
