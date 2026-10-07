@@ -53,7 +53,7 @@ def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20, retries: int 
     return df[~df.index.duplicated(keep="last")]
 
 
-def build_timeframes(m15: pd.DataFrame) -> dict[str, pd.DataFrame]:
+def build_timeframes(m15: pd.DataFrame, as_of: pd.Timestamp | None = None) -> dict[str, pd.DataFrame]:
     # Right-labelled bars make the timestamp represent the bar close.
     # Drop the still-forming bucket so live alerts never use an incomplete
     # H4/H1/M15 candle. Historical backtests remain unchanged because their
@@ -63,7 +63,11 @@ def build_timeframes(m15: pd.DataFrame) -> dict[str, pd.DataFrame]:
         "H1": m15.resample("1h", label="right", closed="right").last().dropna(),
         "H4": m15.resample("4h", label="right", closed="right").last().dropna(),
     }
-    now = pd.Timestamp.now(tz="UTC")
+    now = as_of if as_of is not None else pd.Timestamp.now(tz="UTC")
+    if now.tzinfo is None:
+        now = now.tz_localize("UTC")
+    else:
+        now = now.tz_convert("UTC")
     frames["M15"] = frames["M15"].loc[frames["M15"].index <= now.floor("15min")]
     frames["H1"] = frames["H1"].loc[frames["H1"].index <= now.floor("1h")]
     frames["H4"] = frames["H4"].loc[frames["H4"].index <= now.floor("4h")]
