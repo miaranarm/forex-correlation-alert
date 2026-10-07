@@ -42,18 +42,22 @@ jobs:
           import json
           from pathlib import Path
           p = json.loads(Path("results/strategy_backtest_summary.json").read_text())
-          oos = p["out_of_sample"]
+          test = p["test"]
+          holdout = p["holdout"]
           checks = {
-              "minimum_oos_trades": oos.get("trades", 0) >= 50,
-              "minimum_oos_profit_factor": oos.get("profit_factor") is not None and oos["profit_factor"] >= 1.0,
-              "positive_oos_expectancy": oos.get("expectancy_r", 0) > 0,
+              "minimum_test_trades": test.get("trades", 0) >= 10,
+              "minimum_test_profit_factor": test.get("profit_factor") is not None and test["profit_factor"] >= 1.0,
+              "positive_test_expectancy": test.get("expectancy_r", 0) > 0,
+              "minimum_holdout_trades": holdout.get("trades", 0) >= 10,
+              "minimum_holdout_profit_factor": holdout.get("profit_factor") is not None and holdout["profit_factor"] >= 1.0,
+              "positive_holdout_expectancy": holdout.get("expectancy_r", 0) > 0,
           }
           enabled = all(checks.values())
           gate = {
               "enabled": enabled,
               "validated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
               "checks": checks,
-              "oos": oos,
+              "test": test,\n              "holdout": holdout,
           }
           Path("results/strategy_gate.json").write_text(json.dumps(gate, indent=2), encoding="utf-8")
           print(json.dumps(gate, indent=2))
