@@ -33,17 +33,17 @@ def _evaluate_snapshot(
     threshold = corr_cfg["threshold"]
 
     corrs = {
-        tf: pair_correlation(snap[tf], a, b, window)
+        tf: pair_correlation(snap[tf], a, b, window, corr_cfg.get("min_observations", 60))
         for tf in ("H4", "H1", "M15")
     }
     if abs(corrs["H4"]) < threshold:
         return None
 
     regime = rolling_correlation(
-        snap["H4"], a, b, window, corr_cfg["short_window"]
+        snap["H4"], a, b, window, corr_cfg["short_window"], corr_cfg.get("min_observations", 60)
     )
     stability = correlation_stability(
-        snap["H4"], a, b, window, corr_cfg["stability_segments"]
+        snap["H4"], a, b, window, corr_cfg["stability_segments"], corr_cfg.get("min_observations", 60)
     )
 
     if filtered:
