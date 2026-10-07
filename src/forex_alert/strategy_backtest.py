@@ -47,7 +47,8 @@ def _simulate(prices, direction, cfg):
     sign = 1 if direction == "LONG" else -1
     sl, tp1, tp2 = entry * (1 - sign * sl_pct), entry * (1 + sign * tp1_pct), entry * (1 + sign * tp2_pct)
     trail, best, remaining, realized_r, tp1_hit = entry * (1 - sign * trail_pct), entry, 1.0, 0.0, False
-    for px in prices.iloc[1:]:
+    max_bars = int(s.get("max_bars", len(prices)))
+    for px in prices.iloc[1:max_bars + 1]:
         px = float(px)
         if direction == "LONG":
             best, trail = max(best, px), max(trail, best * (1 - trail_pct))
@@ -108,6 +109,7 @@ def run():
     timestamps = list(h4.index[cc["window"]:-1])
     split = int(len(timestamps) * 0.70)
     rows = []
+    next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
     for idx, ts in enumerate(timestamps):
         for a, b in combinations(available, 2):
             sig = _signal_at(frames, ts, a, b, cfg, weights)
@@ -117,8 +119,12 @@ def run():
             if entries.empty:
                 continue
             entry_ts = entries.index[0]
+            if entry_ts < next_free[a]:
+                continue
             exit_data = m15.loc[m15.index >= entry_ts, a].dropna()
             exit_type, r, tp1 = _simulate(exit_data, sig["direction_a"], cfg)
+            max_bars = int(cfg["strategy"].get("max_bars", len(exit_data)))
+            next_free[a] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
             rows.append({
                 "signal_ts": ts.isoformat(), "entry_ts": entry_ts.isoformat(), "pair": a,
                 "direction": sig["direction_a"], "entry": float(entries.iloc[0]),
