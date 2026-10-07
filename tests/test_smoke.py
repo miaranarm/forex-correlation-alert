@@ -39,3 +39,11 @@ def test_confluence_minimum_is_enforced():
     assert confluence_meets_minimum("H4_ONLY", "H4_ONLY")
     assert not confluence_meets_minimum("H4_ONLY", "H4_H1")
     assert confluence_meets_minimum("FULL", "H4_H1")
+
+
+def test_timeframe_windows_preserve_16_day_horizon():
+    from forex_alert.config import load_config
+    cfg = load_config()
+    windows = cfg["correlation"]["timeframe_windows"]
+    assert windows["H4"] * 4 == windows["H1"]
+    assert windows["H4"] * 16 == windows["M15"]
