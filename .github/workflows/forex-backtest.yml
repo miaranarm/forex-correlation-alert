@@ -1,0 +1,36 @@
+name: Forex Correlation Backtest
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest -q
+      - name: Run historical audit
+        run: python -m forex_alert.backtest
+        env:
+          PYTHONPATH: src
+      - name: Upload backtest
+        uses: actions/upload-artifact@v4
+        with:
+          name: forex-correlation-backtest
+          path: results/backtest_*
+          if-no-files-found: error
