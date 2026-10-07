@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from itertools import combinations
+from itertools import combinations, product
 from pathlib import Path
 
 import pandas as pd
@@ -192,11 +192,81 @@ def run():
                 "hedge_beta": sig["hedge_beta"], "exit": exit_type, "r": r, "tp1": tp1,
                 "sample": "TRAIN" if idx < train_end else ("TEST" if idx < test_end else "HOLDOUT"),
             })
-    df = pd.DataFrame(rows)
+    raw = pd.DataFrame(rows)
     out = Path("results"); out.mkdir(exist_ok=True)
+
+    # TRAIN-only parameter selection. TEST and FINAL HOLDOUT never participate
+    # in choosing parameters. The grid is intentionally small to limit
+    # multiple-testing risk; selected parameters are then frozen.
+    base = cfg["strategy"].copy()
+    grid = product(
+        (1.25, 1.50, 1.75),
+        (0.0020, 0.0025, 0.0030),
+        (0.0040, 0.0050),
+        (0.0080, 0.0100),
+        (0.0020, 0.0025),
+    )
+    candidates = []
+    train_raw = raw[raw["sample"] == "TRAIN"] if not raw.empty else pd.DataFrame()
+    for z_entry, sl, tp1, tp2, trail in grid:
+        if tp1 <= sl or tp2 <= tp1:
+            continue
+        candidate_cfg = dict(cfg)
+        candidate_cfg["strategy"] = dict(base)
+        candidate_cfg["strategy"].update({
+            "z_entry": 1.25, "stop_loss_pct": sl, "tp1_pct": tp1,
+            "tp2_pct": tp2, "trailing_stop_pct": trail,
+        })
+        if train_raw.empty:
+            continue
+        trade_rows = []
+        next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
+        for _, sig in train_raw.sort_values("signal_ts").iterrows():
+            if abs(float(sig["spread_zscore"])) < z_entry:
+                continue
+            entry_ts = pd.Timestamp(sig["entry_ts"])
+            pair = sig["pair"]
+            if entry_ts < next_free[pair]:
+                continue
+            exit_data = m15.loc[m15.index >= entry_ts, pair].dropna()
+            exit_type, r, tp1_hit = _simulate(exit_data, sig["direction"], candidate_cfg)
+            max_bars = int(candidate_cfg["strategy"].get("max_bars", len(exit_data)))
+            next_free[pair] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
+            trade_rows.append({"r": r, "tp1": tp1_hit})
+        metrics = _metrics(pd.DataFrame(trade_rows))
+        if metrics.get("trades", 0) >= 6:
+            candidates.append((metrics.get("expectancy_r", -999), metrics.get("profit_factor") or -999, metrics.get("trades", 0), candidate_cfg["strategy"]))
+    if candidates:
+        _, _, _, selected_strategy = max(candidates, key=lambda x: (x[0], x[1], x[2]))
+    else:
+        selected_strategy = dict(base)
+
+    selected_cfg = dict(cfg)
+    selected_cfg["strategy"] = dict(selected_strategy)
+
+    final_rows = []
+    next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
+    for _, sig in raw.sort_values("signal_ts").iterrows():
+        if abs(float(sig["spread_zscore"])) < float(selected_strategy.get("z_entry", 1.5)):
+            continue
+        entry_ts = pd.Timestamp(sig["entry_ts"])
+        pair = sig["pair"]
+        if entry_ts < next_free[pair]:
+            continue
+        exit_data = m15.loc[m15.index >= entry_ts, pair].dropna()
+        exit_type, r, tp1_hit = _simulate(exit_data, sig["direction"], selected_cfg)
+        max_bars = int(selected_strategy.get("max_bars", len(exit_data)))
+        next_free[pair] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
+        item = sig.to_dict()
+        item.update({"exit": exit_type, "r": r, "tp1": tp1_hit})
+        final_rows.append(item)
+
+    df = pd.DataFrame(final_rows)
     df.to_csv(out / "strategy_backtest_trades.csv", index=False)
     summary = {
-        "data_period_days": cfg["data"]["period_days"], "strategy": cfg["strategy"],
+        "data_period_days": cfg["data"]["period_days"],
+        "strategy": selected_strategy,
+        "train_selection_candidates": len(candidates),
         "all": _metrics(df),
         "train": _metrics(df[df["sample"] == "TRAIN"]) if not df.empty else {"trades": 0},
         "test": _metrics(df[df["sample"] == "TEST"]) if not df.empty else {"trades": 0},
