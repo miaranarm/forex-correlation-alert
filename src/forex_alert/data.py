@@ -1,30 +1,36 @@
 from __future__ import annotations
-import io
+import time
 import requests
 import pandas as pd
 
-STOOQ_SYMBOLS = {
-    "EURUSD": "eurusd",
-    "GBPUSD": "gbpusd",
-    "USDJPY": "usdjpy",
-    "USDCHF": "usdchf",
-    "AUDUSD": "audusd",
-    "NZDUSD": "nzdusd",
-    "USDCAD": "usdcad",
-    "EURGBP": "eurgbp",
-    "EURJPY": "eurjpy",
-    "GBPJPY": "gbpjpy",
-    "AUDJPY": "audjpy",
-    "CHFJPY": "chfjpy",
+YAHOO_SYMBOLS = {
+    "EURUSD": "EURUSD=X", "GBPUSD": "GBPUSD=X", "USDJPY": "JPY=X",
+    "USDCHF": "CHF=X", "AUDUSD": "AUDUSD=X", "NZDUSD": "NZDUSD=X",
+    "USDCAD": "CAD=X", "EURGBP": "EURGBP=X", "EURJPY": "EURJPY=X",
+    "GBPJPY": "GBPJPY=X", "AUDJPY": "AUDJPY=X", "CHFJPY": "CHFJPY=X",
 }
 
-def fetch_daily(pair: str, timeout: int = 20) -> pd.DataFrame:
-    symbol = STOOQ_SYMBOLS[pair]
-    url = f"https://stooq.com/q/d/l/?s={symbol}&d1=20200101&d2=20991231&i=d"
-    r = requests.get(url, timeout=timeout)
+def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20) -> pd.DataFrame:
+    symbol = YAHOO_SYMBOLS[pair]
+    period2 = int(time.time())
+    period1 = period2 - period_days * 86400
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"period1": period1, "period2": period2, "interval": "15m",
+              "events": "history", "includeAdjustedClose": "true"}
+    r = requests.get(url, params=params, timeout=timeout, headers={"User-Agent":"Mozilla/5.0"})
     r.raise_for_status()
-    df = pd.read_csv(io.StringIO(r.text))
-    if df.empty or "Close" not in df:
-        raise ValueError(f"No usable data for {pair}")
-    df["Date"] = pd.to_datetime(df["Date"], utc=True)
-    return df.set_index("Date")[["Close"]].rename(columns={"Close": pair}).dropna()
+    payload = r.json()["chart"]["result"]
+    if not payload:
+        raise ValueError(f"No Yahoo data for {pair}")
+    result = payload[0]
+    idx = pd.to_datetime(result["timestamp"], unit="s", utc=True)
+    close = result["indicators"]["quote"][0]["close"]
+    df = pd.DataFrame({pair: close}, index=idx).dropna()
+    return df[~df.index.duplicated(keep="last")]
+
+def build_timeframes(m15: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    return {
+        "M15": m15.resample("15min").last().dropna(),
+        "H1": m15.resample("1h").last().dropna(),
+        "H4": m15.resample("4h").last().dropna(),
+    }
