@@ -191,8 +191,12 @@ def run_backtest():
         except Exception as exc:
             print(f"WARNING: {pair}: {exc}")
 
-    if len(series) < 2:
-        raise RuntimeError("Not enough market data after provider failures.")
+    minimum_available_pairs = cfg["data"].get("minimum_available_pairs", 8)
+    if len(series) < minimum_available_pairs:
+        raise RuntimeError(
+            f"Insufficient market coverage: {len(series)}/{len(pairs)} pairs available; "
+            f"minimum is {minimum_available_pairs}."
+        )
 
     # Keep each pair's own history. A single provider gap must not erase
     # otherwise valid observations for every other pair.
