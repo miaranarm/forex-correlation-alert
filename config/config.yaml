@@ -27,6 +27,14 @@ scoring:
   minimum_alert_score: 65
   minimum_confluence: H4_ONLY
 
+strategy:
+  timeframe: M15
+  stop_loss_pct: 0.0025
+  tp1_pct: 0.0050
+  tp2_pct: 0.0100
+  trailing_stop_pct: 0.0025
+  tp1_size: 0.50
+
 alerts:
   enabled: true
   console: true
