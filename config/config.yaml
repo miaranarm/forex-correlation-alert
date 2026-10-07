@@ -1,0 +1,40 @@
+correlation:
+  threshold: 0.65
+  window: 96
+  method: pearson
+  min_observations: 60
+
+timeframes:
+  primary: H4
+  confirmation:
+    - H1
+    - M15
+
+pairs:
+  - EURUSD
+  - GBPUSD
+  - USDJPY
+  - USDCHF
+  - AUDUSD
+  - NZDUSD
+  - USDCAD
+  - EURGBP
+  - EURJPY
+  - GBPJPY
+  - AUDJPY
+  - CHFJPY
+
+scoring:
+  correlation_weight: 40
+  h4_weight: 25
+  h1_weight: 20
+  m15_weight: 15
+  minimum_alert_score: 65
+
+alerts:
+  enabled: true
+  console: true
+
+data:
+  provider: stooq
+  request_timeout_seconds: 20
