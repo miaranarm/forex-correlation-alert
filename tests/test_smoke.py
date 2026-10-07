@@ -108,3 +108,10 @@ def test_fetch_15m_retries_transient_provider_failure(monkeypatch):
     assert calls["n"] == 2
     assert isinstance(out, pd.DataFrame)
     assert out.iloc[0, 0] == 1.0
+
+
+def test_minimum_available_pairs_is_configured():
+    from forex_alert.config import load_config
+    cfg = load_config()
+    assert cfg["data"]["minimum_available_pairs"] == 8
+    assert cfg["data"]["minimum_available_pairs"] <= len(cfg["pairs"])
