@@ -35,8 +35,10 @@ def _signal_at(frames, ts, a, b, cfg, weights):
     # Relative-value signal: estimate a rolling OLS hedge ratio on log-price
     # levels, then trade the residual only when it is statistically stretched.
     # This avoids using a return-covariance beta as a price-level hedge ratio.
-    h4 = snap["H4"][[a, b]].dropna()
+    trigger_tf = cfg["strategy"].get("timeframe", "M15")
+    trigger = snap[trigger_tf][[a, b]].dropna()
     lookback = int(cfg["strategy"].get("spread_window", cc["window"]))
+    h4 = trigger
     if len(h4) < lookback:
         return None
     import numpy as np
@@ -139,7 +141,12 @@ def run():
     prices, frames = pd.concat(series, axis=1).sort_index(), build_timeframes(pd.concat(series, axis=1).sort_index())
     h4, m15, cc = frames["H4"], frames["M15"], cfg["correlation"]
     weights = {k: cfg["scoring"][f"{k}_weight"] for k in ("correlation", "h4", "h1", "m15")}
-    timestamps = list(h4.index[cc["window"]:-1])
+    # Validate the strategy at its real execution timeframe. The H4 relationship
+    # remains the primary regime filter, while the spread trigger is evaluated
+    # on completed M15 bars exactly as the live alert engine would do.
+    strategy_frame = frames[cfg["strategy"].get("timeframe", "M15")]
+    warmup = max(cc["window"] * 4, int(cfg["strategy"].get("spread_window", cc["window"])))
+    timestamps = list(strategy_frame.index[warmup:-1])
     train_end = int(len(timestamps) * 0.60)
     test_end = int(len(timestamps) * 0.80)
     rows = []
