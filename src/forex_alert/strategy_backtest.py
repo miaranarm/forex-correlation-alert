@@ -32,33 +32,33 @@ def _signal_at(frames, ts, a, b, cfg, weights):
     score = score_signal(corrs["H4"], aligns["H4"], aligns["H1"], aligns["M15"], weights, cc["threshold"], discriminating=True)
     if score < sc["minimum_alert_score"]:
         return None
-    # Relative-value signal: trade pair A toward the correlation-implied relationship
-    # when the H4 spread is statistically stretched. Inputs are available only through ts.
+    # Relative-value signal: estimate a rolling OLS hedge ratio on log-price
+    # levels, then trade the residual only when it is statistically stretched.
+    # This avoids using a return-covariance beta as a price-level hedge ratio.
     h4 = snap["H4"][[a, b]].dropna()
-    if len(h4) < cc["window"]:
+    lookback = int(cfg["strategy"].get("spread_window", cc["window"]))
+    if len(h4) < lookback:
         return None
     import numpy as np
     logp = np.log(h4)
-    ret = logp.diff().dropna()
-    if len(ret) < cc["window"] - 1:
+    x = logp[b].to_numpy(dtype=float)
+    y = logp[a].to_numpy(dtype=float)
+    xw, yw = x[-lookback:], y[-lookback:]
+    x_mean, y_mean = float(xw.mean()), float(yw.mean())
+    denom = float(((xw - x_mean) ** 2).sum())
+    if denom <= 0:
         return None
-    min_beta_obs = max(30, cc["min_observations"] - 1)
-    cov = ret[a].rolling(cc["window"] - 1, min_periods=min_beta_obs).cov(ret[b])
-    var = ret[b].rolling(cc["window"] - 1, min_periods=min_beta_obs).var()
-    beta_series = cov / var
-    beta_value = float(beta_series.iloc[-1]) if pd.notna(beta_series.iloc[-1]) else 1.0
-    if abs(beta_value) > 3.0 or abs(beta_value) < 0.10:
+    beta_value = float(((xw - x_mean) * (yw - y_mean)).sum() / denom)
+    if not np.isfinite(beta_value) or abs(beta_value) > 3.0 or abs(beta_value) < 0.10:
         return None
-    spread = logp[a] - beta_value * logp[b]
-    lookback = int(cfg["strategy"].get("spread_window", cc["window"]))
-    if len(spread) < lookback:
+    intercept = y_mean - beta_value * x_mean
+    residual = logp[a] - (intercept + beta_value * logp[b])
+    resid = residual.iloc[-lookback:]
+    mean = float(resid.mean())
+    std = float(resid.std(ddof=0))
+    if not np.isfinite(mean) or not np.isfinite(std) or std <= 0:
         return None
-    min_spread_obs = max(30, lookback // 2)
-    mean = spread.rolling(lookback, min_periods=min_spread_obs).mean().iloc[-1]
-    std = spread.rolling(lookback, min_periods=min_spread_obs).std(ddof=0).iloc[-1]
-    if pd.isna(mean) or pd.isna(std) or std <= 0:
-        return None
-    zscore = float((spread.iloc[-1] - mean) / std)
+    zscore = float((residual.iloc[-1] - mean) / std)
     z_entry = float(cfg["strategy"].get("z_entry", 1.5))
     if abs(zscore) < z_entry:
         return None
