@@ -239,6 +239,11 @@ def run_backtest():
             item.update(_aggregate(group))
             breakdown_rows.append(item)
 
+        for (pair_a, pair_b), group in filtered_df.groupby(["pair_a", "pair_b"]):
+            item = {"group": f"pair:{pair_a}|{pair_b}"}
+            item.update(_aggregate(group))
+            breakdown_rows.append(item)
+
         filtered_df["score_bucket"] = pd.cut(
             filtered_df["score"],
             bins=[-1, 69.999, 79.999, 89.999, 101],
