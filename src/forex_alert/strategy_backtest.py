@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from .config import load_config
-from .data import fetch_15m, build_timeframes
+from .data import fetch_15m, fetch_15m_dukascopy, build_timeframes
 from .correlation import pair_correlation, rolling_correlation, correlation_stability, correlation_matrix
 from .scoring import trend_direction, score_signal, relationship_alignment, timeframe_confluence, confluence_meets_minimum
 
@@ -128,12 +128,21 @@ def _metrics(df):
 
 def run():
     cfg = load_config()
-    series = []
-    for pair in cfg["pairs"]:
-        try:
-            series.append(fetch_15m(pair, cfg["data"]["period_days"], cfg["data"]["request_timeout_seconds"]))
-        except Exception as exc:
-            print(f"WARNING: {pair}: {exc}")
+    provider = cfg["data"].get("backtest_provider", cfg["data"].get("provider", "yahoo_chart"))
+    if provider == "dukascopy":
+        dukas = fetch_15m_dukascopy(
+            cfg["pairs"],
+            cfg["data"]["period_days"],
+            max(cfg["data"]["request_timeout_seconds"], 60),
+        )
+        series = list(dukas.values())
+    else:
+        series = []
+        for pair in cfg["pairs"]:
+            try:
+                series.append(fetch_15m(pair, cfg["data"]["period_days"], cfg["data"]["request_timeout_seconds"], provider=provider))
+            except Exception as exc:
+                print(f"WARNING: {pair}: {exc}")
     available = [p for p in cfg["pairs"] if any(p in f.columns and not f[p].dropna().empty for f in series)]
     if len(available) < cfg["data"].get("minimum_available_pairs", 8):
         raise RuntimeError(f"Insufficient market coverage: {len(available)}/{len(cfg['pairs'])} pairs available")
