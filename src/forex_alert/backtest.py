@@ -170,6 +170,9 @@ def run_backtest():
         except Exception as exc:
             print(f"WARNING: {pair}: {exc}")
 
+    if len(series) < 2:
+        raise RuntimeError("Not enough market data after provider failures.")
+
     # Keep each pair's own history. A single provider gap must not erase
     # otherwise valid observations for every other pair.
     prices = pd.concat(series, axis=1).sort_index()
