@@ -191,10 +191,19 @@ def run_backtest():
         except Exception as exc:
             print(f"WARNING: {pair}: {exc}")
 
+    available_pairs = [
+        pair
+        for pair in pairs
+        if any(
+            pair in frame.columns
+            and not frame[pair].dropna().empty
+            for frame in series
+        )
+    ]
     minimum_available_pairs = cfg["data"].get("minimum_available_pairs", 8)
-    if len(series) < minimum_available_pairs:
+    if len(available_pairs) < minimum_available_pairs:
         raise RuntimeError(
-            f"Insufficient market coverage: {len(series)}/{len(pairs)} pairs available; "
+            f"Insufficient market coverage: {len(available_pairs)}/{len(pairs)} pairs available; "
             f"minimum is {minimum_available_pairs}."
         )
 
@@ -225,8 +234,8 @@ def run_backtest():
         ts = h4.index[pos]
         snap = {tf: frames[tf].loc[:ts] for tf in ("H4", "H1", "M15")}
 
-        for i, a in enumerate(pairs):
-            for b in pairs[i + 1:]:
+        for i, a in enumerate(available_pairs):
+            for b in available_pairs[i + 1:]:
                 try:
                     if min(
                         len(snap["H4"][[a, b]].dropna()),
