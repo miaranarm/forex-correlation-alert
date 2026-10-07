@@ -34,9 +34,10 @@ strategy:
   tp2_pct: 0.0100
   trailing_stop_pct: 0.0025
   tp1_size: 0.50
+  max_bars: 96
 
 alerts:
-  enabled: true
+  enabled: false
   console: true
 
 data:
