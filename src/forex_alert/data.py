@@ -12,7 +12,7 @@ YAHOO_SYMBOLS = {
 }
 
 
-def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20) -> pd.DataFrame:
+def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20, retries: int = 3) -> pd.DataFrame:
     symbol = YAHOO_SYMBOLS[pair]
     period2 = int(time.time())
     # Yahoo limits 15m intraday history to roughly 60 days; keep a safety margin.
@@ -26,16 +26,26 @@ def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20) -> pd.DataFra
         "events": "history",
         "includeAdjustedClose": "true",
     }
-    r = requests.get(
-        url,
-        params=params,
-        timeout=timeout,
-        headers={"User-Agent": "Mozilla/5.0"},
-    )
-    r.raise_for_status()
-    payload = r.json()["chart"]["result"]
-    if not payload:
-        raise ValueError(f"No Yahoo data for {pair}")
+    last_error = None
+    for attempt in range(max(1, retries)):
+        try:
+            r = requests.get(
+                url,
+                params=params,
+                timeout=timeout,
+                headers={"User-Agent": "Mozilla/5.0"},
+            )
+            r.raise_for_status()
+            payload = r.json()["chart"]["result"]
+            if not payload:
+                raise ValueError(f"No Yahoo data for {pair}")
+            break
+        except Exception as exc:
+            last_error = exc
+            if attempt + 1 < max(1, retries):
+                time.sleep(2 ** attempt)
+            else:
+                raise last_error
     result = payload[0]
     idx = pd.to_datetime(result["timestamp"], unit="s", utc=True)
     close = result["indicators"]["quote"][0]["close"]
