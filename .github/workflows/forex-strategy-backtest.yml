@@ -41,6 +41,7 @@ jobs:
         run: |
           import json
           from pathlib import Path
+          from datetime import datetime, timezone
           p = json.loads(Path("results/strategy_backtest_summary.json").read_text())
           test = p["test"]
           holdout = p["holdout"]
@@ -55,9 +56,10 @@ jobs:
           enabled = all(checks.values())
           gate = {
               "enabled": enabled,
-              "validated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+              "validated_at": datetime.now(timezone.utc).isoformat(),
               "checks": checks,
-              "test": test,\n              "holdout": holdout,
+              "test": test,
+              "holdout": holdout,
           }
           Path("results/strategy_gate.json").write_text(json.dumps(gate, indent=2), encoding="utf-8")
           print(json.dumps(gate, indent=2))
