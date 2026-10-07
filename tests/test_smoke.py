@@ -18,3 +18,17 @@ def test_stability_empty():
     import pandas as pd
     x=pd.DataFrame({"a":[1,2],"b":[1,2]})
     assert correlation_stability(x,"a","b",window=10,segments=4)==0.0
+
+
+def test_pair_correlation_rejects_insufficient_observations():
+    import pandas as pd
+    from forex_alert.correlation import pair_correlation
+    x = pd.DataFrame({"a": range(10), "b": range(10)})
+    assert pd.isna(pair_correlation(x, "a", "b", window=96, min_observations=60))
+
+
+def test_pair_correlation_rejects_constant_series():
+    import pandas as pd
+    from forex_alert.correlation import pair_correlation
+    x = pd.DataFrame({"a": [1.0] * 100, "b": list(range(100))})
+    assert pd.isna(pair_correlation(x, "a", "b", window=96, min_observations=60))
