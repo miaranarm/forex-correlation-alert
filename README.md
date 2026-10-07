@@ -2,17 +2,25 @@
 
 Surveillance Forex **alert-only**, sans aucune exécution automatique.
 
-## Moteur V0.3
+## Version actuelle
 
-- données intraday M15 ;
-- construction M15 → H1 → H4 ;
+Le moteur combine une ancre **H4** avec des confirmations **H1/M15**, puis filtre les relations instables avant de générer une alerte.
+
+### Détection
+
+- données intraday M15 via Yahoo Finance Chart ;
+- construction M15 → H1 → H4 avec bougies alignées sur leur clôture ;
 - corrélation de Pearson sur rendements ;
 - seuil configurable **|r| >= 0.65** ;
-- confirmation multi-timeframe ;
+- H4 obligatoire comme timeframe primaire ;
+- contrôle de stabilité sur 4 segments ;
+- contrôle de dérive entre corrélation courte et longue ;
 - direction EMA 20/50 ;
-- score de confluence sur 100 ;
-- état persistant des alertes pour distinguer NEW / MAINTAINED / CLEARED ;
-- rapport JSON et Markdown ;
+- confluence H4 → H1 → M15 ;
+- score sur 100 ;
+- seuil de confluence configurable (`H4_ONLY` par défaut) ;
+- état persistant `NEW / MAINTAINED / CLEARED` ;
+- rapports JSON et Markdown ;
 - workflow GitHub Actions toutes les 30 minutes ;
 - aucune fonction d'ordre et aucune clé de trading.
 
@@ -23,9 +31,30 @@ Surveillance Forex **alert-only**, sans aucune exécution automatique.
 - H1 : 20 points ;
 - M15 : 15 points.
 
-Score minimal par défaut : 65/100.
+Score minimal par défaut : **65/100**.
 
-## Sorties
+## Audit historique
+
+Le workflow `Forex Correlation Backtest` réalise un audit historique indépendant de toute exécution.
+
+Il compare :
+
+1. une baseline brute basée uniquement sur `|r| >= 0.65` ;
+2. le modèle filtré par stabilité, dérive, confluence et score.
+
+Les résultats sont mesurés à **4 h, 8 h, 16 h et 24 h**.
+
+L'audit ne calcule pas de P&L : il mesure la persistance de la relation entre les deux devises. Les signaux utilisent des bougies H4 clôturées et les résultats commencent sur les bougies suivantes afin d'éviter le look-ahead.
+
+Sorties principales :
+
+- `backtest_raw_observations.csv`
+- `backtest_observations.csv`
+- `backtest_breakdown.csv`
+- `backtest_summary.json`
+- `backtest_summary.md`
+
+## Sorties live
 
 Chaque exécution produit :
 
@@ -33,12 +62,21 @@ Chaque exécution produit :
 - `results/latest_alerts.md`
 - `results/alert_state.json`
 
-Le workflow conserve ces fichiers comme artifact.
+Le rapport live affiche notamment :
+
+- corrélation H4/H1/M15 ;
+- confluence ;
+- stabilité ;
+- dérive de régime ;
+- score ;
+- statut `NEW` ou `MAINTAINED`.
 
 ## Structure
 
 ```text
-.github/workflows/forex-alert.yml
+.github/workflows/
+  forex-alert.yml
+  forex-backtest.yml
 config/config.yaml
 src/forex_alert/
   config.py
@@ -49,14 +87,11 @@ src/forex_alert/
   state.py
   report.py
   main.py
+  backtest.py
 tests/test_smoke.py
 requirements.txt
 README.md
 ```
-
-## Données
-
-La source initiale est Yahoo Finance Chart. Une source secondaire pourra être ajoutée ultérieurement.
 
 ## Sécurité
 
