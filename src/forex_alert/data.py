@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import time
 import requests
 import pandas as pd
@@ -10,14 +11,25 @@ YAHOO_SYMBOLS = {
     "GBPJPY": "GBPJPY=X", "AUDJPY": "AUDJPY=X", "CHFJPY": "CHFJPY=X",
 }
 
+
 def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20) -> pd.DataFrame:
     symbol = YAHOO_SYMBOLS[pair]
     period2 = int(time.time())
     period1 = period2 - period_days * 86400
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-    params = {"period1": period1, "period2": period2, "interval": "15m",
-              "events": "history", "includeAdjustedClose": "true"}
-    r = requests.get(url, params=params, timeout=timeout, headers={"User-Agent":"Mozilla/5.0"})
+    params = {
+        "period1": period1,
+        "period2": period2,
+        "interval": "15m",
+        "events": "history",
+        "includeAdjustedClose": "true",
+    }
+    r = requests.get(
+        url,
+        params=params,
+        timeout=timeout,
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
     r.raise_for_status()
     payload = r.json()["chart"]["result"]
     if not payload:
@@ -28,9 +40,12 @@ def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20) -> pd.DataFra
     df = pd.DataFrame({pair: close}, index=idx).dropna()
     return df[~df.index.duplicated(keep="last")]
 
+
 def build_timeframes(m15: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    # Right-labelled bars prevent a backtest snapshot from using prices
+    # that occur after the stated signal timestamp.
     return {
-        "M15": m15.resample("15min").last().dropna(),
-        "H1": m15.resample("1h").last().dropna(),
-        "H4": m15.resample("4h").last().dropna(),
+        "M15": m15.resample("15min", label="right", closed="right").last().dropna(),
+        "H1": m15.resample("1h", label="right", closed="right").last().dropna(),
+        "H4": m15.resample("4h", label="right", closed="right").last().dropna(),
     }
