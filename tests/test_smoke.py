@@ -139,4 +139,43 @@ def test_build_timeframes_normalizes_naive_as_of_to_utc():
     frames = build_timeframes(m15, as_of=pd.Timestamp("2026-10-07 01:07:00"))
 
     assert frames["M15"].index.max() == pd.Timestamp("2026-10-07 01:00:00", tz="UTC")
-\n\ndef test_main_ignores_empty_pair_frames_for_market_coverage(monkeypatch):\n    import pandas as pd\n    from forex_alert import main\n\n    empty = pd.DataFrame({"EURUSD": []})\n    valid = pd.DataFrame({"GBPUSD": [1.0, 1.1]})\n    monkeypatch.setattr(main, "fetch_15m", lambda pair, *args: empty if pair == "EURUSD" else valid)\n    monkeypatch.setattr(main, "load_config", lambda: {\n        "pairs": ["EURUSD", "GBPUSD"],\n        "data": {"period_days": 1, "request_timeout_seconds": 1, "minimum_available_pairs": 2},\n    })\n\n    try:\n        main.run()\n    except RuntimeError as exc:\n        assert "Insufficient market coverage: 1/2 pairs available" in str(exc)\n    else:\n        raise AssertionError("empty provider data must not count as market coverage")\n\n\ndef test_backtest_ignores_empty_pair_frames_for_market_coverage(monkeypatch):\n    import pandas as pd\n    from forex_alert import backtest\n\n    empty = pd.DataFrame({"EURUSD": []})\n    valid = pd.DataFrame({"GBPUSD": [1.0, 1.1]})\n    monkeypatch.setattr(backtest, "fetch_15m", lambda pair, *args: empty if pair == "EURUSD" else valid)\n    monkeypatch.setattr(backtest, "load_config", lambda: {\n        "pairs": ["EURUSD", "GBPUSD"],\n        "data": {"period_days": 1, "request_timeout_seconds": 1, "minimum_available_pairs": 2},\n    })\n\n    try:\n        backtest.run_backtest()\n    except RuntimeError as exc:\n        assert "Insufficient market coverage: 1/2 pairs available" in str(exc)\n    else:\n        raise AssertionError("empty provider data must not count as market coverage")\n
+
+
+def test_main_ignores_empty_pair_frames_for_market_coverage(monkeypatch):
+    import pandas as pd
+    from forex_alert import main
+
+    empty = pd.DataFrame({"EURUSD": []})
+    valid = pd.DataFrame({"GBPUSD": [1.0, 1.1]})
+    monkeypatch.setattr(main, "fetch_15m", lambda pair, *args: empty if pair == "EURUSD" else valid)
+    monkeypatch.setattr(main, "load_config", lambda: {
+        "pairs": ["EURUSD", "GBPUSD"],
+        "data": {"period_days": 1, "request_timeout_seconds": 1, "minimum_available_pairs": 2},
+    })
+
+    try:
+        main.run()
+    except RuntimeError as exc:
+        assert "Insufficient market coverage: 1/2 pairs available" in str(exc)
+    else:
+        raise AssertionError("empty provider data must not count as market coverage")
+
+
+def test_backtest_ignores_empty_pair_frames_for_market_coverage(monkeypatch):
+    import pandas as pd
+    from forex_alert import backtest
+
+    empty = pd.DataFrame({"EURUSD": []})
+    valid = pd.DataFrame({"GBPUSD": [1.0, 1.1]})
+    monkeypatch.setattr(backtest, "fetch_15m", lambda pair, *args: empty if pair == "EURUSD" else valid)
+    monkeypatch.setattr(backtest, "load_config", lambda: {
+        "pairs": ["EURUSD", "GBPUSD"],
+        "data": {"period_days": 1, "request_timeout_seconds": 1, "minimum_available_pairs": 2},
+    })
+
+    try:
+        backtest.run_backtest()
+    except RuntimeError as exc:
+        assert "Insufficient market coverage: 1/2 pairs available" in str(exc)
+    else:
+        raise AssertionError("empty provider data must not count as market coverage")
