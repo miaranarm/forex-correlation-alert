@@ -31,9 +31,10 @@ def _evaluate_snapshot(
     score_cfg = cfg["scoring"]
     window = corr_cfg["window"]
     threshold = corr_cfg["threshold"]
+    timeframe_windows = corr_cfg.get("timeframe_windows", {"H4": window, "H1": window, "M15": window})
 
     corrs = {
-        tf: pair_correlation(snap[tf], a, b, window, corr_cfg.get("min_observations", 60))
+        tf: pair_correlation(snap[tf], a, b, timeframe_windows[tf], corr_cfg.get("min_observations", 60))
         for tf in ("H4", "H1", "M15")
     }
     if abs(corrs["H4"]) < threshold:
@@ -299,6 +300,7 @@ def run_backtest():
         f"- Data window: {summary['data_period_days']} days",
         f"- H4 bars: {summary['h4_bars']}",
         f"- H4 lookback: {summary['lookback_h4_bars']} bars",
+        f"- Correlation windows: {timeframe_windows}",
         f"- Minimum observations: {summary['minimum_observations']}",
         "",
         "## Raw threshold baseline",
