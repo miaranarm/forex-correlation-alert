@@ -20,7 +20,15 @@ def run():
     if len(series) < 2:
         raise RuntimeError("Not enough market data.")
 
-    available_pairs = [\n        pair\n        for pair in cfg["pairs"]\n        if any(\n            pair in frame.columns\n            and not frame[pair].dropna().empty\n            for frame in series\n        )\n    ]
+    available_pairs = [
+        pair
+        for pair in cfg["pairs"]
+        if any(
+            pair in frame.columns
+            and not frame[pair].dropna().empty
+            for frame in series
+        )
+    ]
     minimum_available_pairs = cfg["data"].get("minimum_available_pairs", 8)
     if len(available_pairs) < minimum_available_pairs:
         raise RuntimeError(
