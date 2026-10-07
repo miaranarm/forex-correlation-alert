@@ -65,7 +65,11 @@ def _signal_at(frames, ts, a, b, cfg, weights):
     z_entry = min(float(cfg["strategy"].get("z_entry", 1.5)), 1.25)
     if abs(zscore) < z_entry:
         return None
-    direction_a = "SHORT" if zscore > z_entry else "LONG"
+    signal_mode = cfg["strategy"].get("signal_mode", "mean_reversion")
+    if signal_mode == "momentum":
+        direction_a = "LONG" if zscore > z_entry else "SHORT"
+    else:
+        direction_a = "SHORT" if zscore > z_entry else "LONG"
     return {
         "direction_a": direction_a,
         "score": score,
@@ -201,6 +205,7 @@ def run():
     # multiple-testing risk; selected parameters are then frozen.
     base = cfg["strategy"].copy()
     grid = product(
+        ("mean_reversion", "momentum"),
         (1.25, 1.50, 1.75),
         (0.0020, 0.0025, 0.0030),
         (0.0040, 0.0050),
@@ -209,13 +214,13 @@ def run():
     )
     candidates = []
     train_raw = raw[raw["sample"] == "TRAIN"] if not raw.empty else pd.DataFrame()
-    for z_entry, sl, tp1, tp2, trail in grid:
+    for signal_mode, z_entry, sl, tp1, tp2, trail in grid:
         if tp1 <= sl or tp2 <= tp1:
             continue
         candidate_cfg = dict(cfg)
         candidate_cfg["strategy"] = dict(base)
         candidate_cfg["strategy"].update({
-            "z_entry": 1.25, "stop_loss_pct": sl, "tp1_pct": tp1,
+            "signal_mode": signal_mode, "z_entry": 1.25, "stop_loss_pct": sl, "tp1_pct": tp1,
             "tp2_pct": tp2, "trailing_stop_pct": trail,
         })
         if train_raw.empty:
