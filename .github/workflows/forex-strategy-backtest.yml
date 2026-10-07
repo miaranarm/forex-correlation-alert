@@ -32,7 +32,21 @@ jobs:
       - run: pytest -q
       - name: Run executable strategy backtest
         run: python -m forex_alert.strategy_backtest
+      - name: Validate out-of-sample robustness
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          p = json.loads(Path("results/strategy_backtest_summary.json").read_text())
+          oos = p["out_of_sample"]
+          if oos.get("trades", 0) < 50:
+              raise SystemExit(f"FAIL: insufficient OOS trades: {oos.get('trades', 0)}")
+          if oos.get("profit_factor") is None or oos["profit_factor"] < 1.0:
+              raise SystemExit(f"FAIL: OOS profit factor {oos.get('profit_factor')}")
+          if oos.get("expectancy_r", 0) <= 0:
+              raise SystemExit(f"FAIL: OOS expectancy {oos.get('expectancy_r')}")
       - name: Upload strategy backtest
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: forex-signal-strategy-backtest
