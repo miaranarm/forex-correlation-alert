@@ -140,7 +140,8 @@ def run():
     h4, m15, cc = frames["H4"], frames["M15"], cfg["correlation"]
     weights = {k: cfg["scoring"][f"{k}_weight"] for k in ("correlation", "h4", "h1", "m15")}
     timestamps = list(h4.index[cc["window"]:-1])
-    split = int(len(timestamps) * 0.70)
+    train_end = int(len(timestamps) * 0.60)
+    test_end = int(len(timestamps) * 0.80)
     rows = []
     next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
     for idx, ts in enumerate(timestamps):
@@ -164,7 +165,7 @@ def run():
                 "score": sig["score"], "correlation_h4": round(float(sig["correlation_h4"]), 4),
                 "confluence": sig["confluence"], "spread_zscore": sig["spread_zscore"],
                 "hedge_beta": sig["hedge_beta"], "exit": exit_type, "r": r, "tp1": tp1,
-                "sample": "IS" if idx < split else "OOS",
+                "sample": "TRAIN" if idx < train_end else ("TEST" if idx < test_end else "HOLDOUT"),
             })
     df = pd.DataFrame(rows)
     out = Path("results"); out.mkdir(exist_ok=True)
@@ -172,12 +173,13 @@ def run():
     summary = {
         "data_period_days": cfg["data"]["period_days"], "strategy": cfg["strategy"],
         "all": _metrics(df),
-        "in_sample": _metrics(df[df["sample"] == "IS"]) if not df.empty else {"trades": 0},
-        "out_of_sample": _metrics(df[df["sample"] == "OOS"]) if not df.empty else {"trades": 0},
+        "train": _metrics(df[df["sample"] == "TRAIN"]) if not df.empty else {"trades": 0},
+        "test": _metrics(df[df["sample"] == "TEST"]) if not df.empty else {"trades": 0},
+        "holdout": _metrics(df[df["sample"] == "HOLDOUT"]) if not df.empty else {"trades": 0},
     }
     (out / "strategy_backtest_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    lines = ["# Forex Signal Strategy Backtest", "", "Relative-value execution on completed H4 relationship signals and next M15 close; no intrabar high/low assumption.", "The strategy trades pair A toward a statistically stretched correlation-implied spread.", "Chronological 70/30 IS/OOS split; OOS is never used for parameter selection.", ""]
-    for name, metrics in (("All", summary["all"]), ("In-sample", summary["in_sample"]), ("Out-of-sample", summary["out_of_sample"])):
+    lines = ["# Forex Signal Strategy Backtest", "", "Relative-value execution on completed H4 relationship signals and next M15 close; no intrabar high/low assumption.", "The strategy trades pair A toward a statistically stretched correlation-implied spread.", "Strict chronological TRAIN/TEST/HOLDOUT split (60/20/20); HOLDOUT is never used for selection or tuning.", ""]
+    for name, metrics in (("All", summary["all"]), ("TRAIN", summary["train"]), ("TEST", summary["test"]), ("FINAL HOLDOUT", summary["holdout"])):
         lines += [f"## {name}", ""] + [f"- {k}: {v}" for k, v in metrics.items()] + [""]
     (out / "strategy_backtest_summary.md").write_text("\n".join(lines), encoding="utf-8")
     print(json.dumps(summary, indent=2))
