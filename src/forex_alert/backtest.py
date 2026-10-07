@@ -13,6 +13,7 @@ from .scoring import (
     score_signal,
     relationship_alignment,
     timeframe_confluence,
+    confluence_meets_minimum,
 )
 
 
@@ -64,7 +65,9 @@ def _evaluate_snapshot(
         confluence = timeframe_confluence(
             (aligns["H4"], aligns["H1"], aligns["M15"])
         )
-        if confluence == "WEAK":
+        if not confluence_meets_minimum(
+            confluence, score_cfg.get("minimum_confluence", "H4_ONLY")
+        ):
             return None
 
         score = score_signal(
