@@ -37,7 +37,11 @@ def _evaluate_snapshot(
         tf: pair_correlation(snap[tf], a, b, timeframe_windows[tf], corr_cfg.get("min_observations", 60))
         for tf in ("H4", "H1", "M15")
     }
-    if abs(corrs["H4"]) < threshold:
+    # The filtered model is a three-timeframe model. A snapshot with a
+    # missing confirmation correlation must not be treated as a valid signal.
+    if pd.isna(corrs["H4"]) or abs(corrs["H4"]) < threshold:
+        return None
+    if filtered and any(pd.isna(corrs[tf]) for tf in ("H1", "M15")):
         return None
 
     regime = rolling_correlation(
@@ -155,16 +159,21 @@ def run_backtest():
     pairs = cfg["pairs"]
     series = []
     for pair in pairs:
-        series.append(
-            fetch_15m(
-                pair,
-                cfg["data"]["period_days"],
-                cfg["data"]["request_timeout_seconds"],
+        try:
+            series.append(
+                fetch_15m(
+                    pair,
+                    cfg["data"]["period_days"],
+                    cfg["data"]["request_timeout_seconds"],
+                )
             )
-        )
+        except Exception as exc:
+            print(f"WARNING: {pair}: {exc}")
 
-    raw = pd.concat(series, axis=1).dropna()
-    frames = build_timeframes(raw)
+    # Keep each pair's own history. A single provider gap must not erase
+    # otherwise valid observations for every other pair.
+    prices = pd.concat(series, axis=1).sort_index()
+    frames = build_timeframes(prices)
     h4 = frames["H4"]
 
     corr_cfg = cfg["correlation"]
