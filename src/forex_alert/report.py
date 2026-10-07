@@ -12,36 +12,29 @@ def write_reports(alerts, cleared, path="results"):
         "alerts": alerts,
         "cleared": cleared,
     }
-    (p / "latest_alerts.json").write_text(
-        json.dumps(payload, indent=2), encoding="utf-8"
-    )
+    (p / "latest_alerts.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    lines = [
-        "# Forex Correlation Alerts",
-        "",
-        f"Generated: {payload['generated_at']}",
-        "",
-    ]
-
+    lines = ["# Forex Signals", "", f"Generated: {payload['generated_at']}", ""]
     if not alerts:
-        lines.append("No active alert.")
+        lines.append("No active signal.")
 
     for a in alerts:
-        lines.append(
-            f"- **{a['status']}** {a['pair_a']} / {a['pair_b']} | "
-            f"H4 {a['correlation_h4']:+.3f} | "
-            f"H1 {a['correlation_h1']:+.3f} | "
-            f"M15 {a['correlation_m15']:+.3f} | "
-            f"confluence {a['confluence']} | "
-            f"stability {a['stability']:.2f} | "
-            f"drift {a['regime_drift']:+.3f} | "
-            f"score {a['score']:.1f}/100"
-        )
+        for s in a.get("signals", []):
+            lines += [
+                f"## {s['pair']} — {s['signal']}",
+                "",
+                f"- **Paire:** {s['pair']}",
+                f"- **Signal:** {s['signal']}",
+                f"- **Prix d'entrée:** {s['entry']}",
+                f"- **SL:** {s['sl']}",
+                f"- **TP1:** {s['tp1']}",
+                f"- **TP2:** {s['tp2']}",
+                f"- **Trailing Stop:** {s['trailing_stop']}",
+                f"- **Timeframe:** {s['timeframe']}",
+                "",
+            ]
 
     if cleared:
-        lines += ["", "## Cleared", ""]
-        lines.extend(f"- {x}" for x in cleared)
+        lines += ["## Cleared", ""] + [f"- {x}" for x in cleared]
 
-    (p / "latest_alerts.md").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+    (p / "latest_alerts.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
