@@ -1,8 +1,8 @@
 {
   "enabled": false,
-  "validated_at": "2026-10-07T14:32:53.654666+00:00",
+  "validated_at": "2026-10-07T15:30:37.359988+00:00",
   "checks": {
-    "minimum_test_trades": false,
+    "minimum_test_trades": true,
     "minimum_test_profit_factor": false,
     "positive_test_expectancy": false,
     "minimum_holdout_trades": true,
@@ -10,21 +10,21 @@
     "positive_holdout_expectancy": false
   },
   "test": {
-    "trades": 5,
-    "win_rate": 0.4,
-    "profit_factor": 0.4288,
-    "expectancy_r": -1.8068,
-    "total_r": -9.034,
-    "max_drawdown_r": -6.9552,
-    "tp1_rate": 0.4
+    "trades": 12,
+    "win_rate": 0.25,
+    "profit_factor": 0.7734,
+    "expectancy_r": -0.4874,
+    "total_r": -5.8492,
+    "max_drawdown_r": -10.6378,
+    "tp1_rate": 0.1667
   },
   "holdout": {
-    "trades": 11,
-    "win_rate": 0.3636,
-    "profit_factor": 0.3626,
-    "expectancy_r": -0.7889,
-    "total_r": -8.6779,
-    "max_drawdown_r": -5.7455,
-    "tp1_rate": 0.3636
+    "trades": 23,
+    "win_rate": 0.3043,
+    "profit_factor": 0.177,
+    "expectancy_r": -0.9063,
+    "total_r": -20.8441,
+    "max_drawdown_r": -20.9701,
+    "tp1_rate": 0.2174
   }
 }
