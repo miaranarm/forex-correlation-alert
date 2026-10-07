@@ -15,7 +15,9 @@ YAHOO_SYMBOLS = {
 def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20) -> pd.DataFrame:
     symbol = YAHOO_SYMBOLS[pair]
     period2 = int(time.time())
-    period1 = period2 - period_days * 86400
+    # Yahoo limits 15m intraday history to roughly 60 days; keep a safety margin.
+    effective_days = min(period_days, 59)
+    period1 = period2 - effective_days * 86400
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
     params = {
         "period1": period1,
