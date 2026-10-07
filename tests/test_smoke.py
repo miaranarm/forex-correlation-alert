@@ -115,3 +115,27 @@ def test_minimum_available_pairs_is_configured():
     cfg = load_config()
     assert cfg["data"]["minimum_available_pairs"] == 8
     assert cfg["data"]["minimum_available_pairs"] <= len(cfg["pairs"])
+
+
+def test_build_timeframes_excludes_incomplete_bars():
+    import pandas as pd
+    from forex_alert.data import build_timeframes
+
+    idx = pd.date_range("2026-10-07 00:00:00", periods=9, freq="15min", tz="UTC")
+    m15 = pd.DataFrame({"EURUSD": range(100, 109)}, index=idx)
+    frames = build_timeframes(m15, as_of=pd.Timestamp("2026-10-07 02:07:00", tz="UTC"))
+
+    assert frames["M15"].index.max() == pd.Timestamp("2026-10-07 02:00:00", tz="UTC")
+    assert frames["H1"].index.max() == pd.Timestamp("2026-10-07 02:00:00", tz="UTC")
+    assert frames["H4"].index.max() == pd.Timestamp("2026-10-07 00:00:00", tz="UTC")
+
+
+def test_build_timeframes_normalizes_naive_as_of_to_utc():
+    import pandas as pd
+    from forex_alert.data import build_timeframes
+
+    idx = pd.date_range("2026-10-07 00:00:00", periods=5, freq="15min", tz="UTC")
+    m15 = pd.DataFrame({"EURUSD": range(100, 105)}, index=idx)
+    frames = build_timeframes(m15, as_of=pd.Timestamp("2026-10-07 01:07:00"))
+
+    assert frames["M15"].index.max() == pd.Timestamp("2026-10-07 01:00:00", tz="UTC")
