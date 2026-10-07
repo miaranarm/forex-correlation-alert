@@ -23,6 +23,7 @@ def run():
     frames = build_timeframes(pd.concat(series, axis=1).dropna())
     corr_cfg = cfg["correlation"]
     window = corr_cfg["window"]
+    timeframe_windows = corr_cfg.get("timeframe_windows", {"H4": window, "H1": window, "M15": window})
     threshold = corr_cfg["threshold"]
     min_obs = corr_cfg.get("min_observations", 60)
     stability_min = corr_cfg["minimum_stability"]
@@ -32,7 +33,7 @@ def run():
     alerts = []
     for i, a in enumerate(cfg["pairs"]):
         for b in cfg["pairs"][i + 1:]:
-            corrs = {tf: pair_correlation(frames[tf], a, b, window, min_obs) for tf in ("H4", "H1", "M15")}
+            corrs = {tf: pair_correlation(frames[tf], a, b, timeframe_windows[tf], min_obs) for tf in ("H4", "H1", "M15")}
             if any(math.isnan(corrs[tf]) for tf in corrs) or abs(corrs["H4"]) < threshold:
                 continue
             regime = rolling_correlation(frames["H4"], a, b, window, corr_cfg["short_window"], min_obs)
