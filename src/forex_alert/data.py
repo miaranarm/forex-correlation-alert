@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
+import subprocess
 import time
+from datetime import datetime, timedelta, timezone
+
 import requests
 import pandas as pd
 
@@ -12,7 +16,12 @@ YAHOO_SYMBOLS = {
 }
 
 
-def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20, retries: int = 3) -> pd.DataFrame:
+def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20, retries: int = 3, provider: str = "yahoo_chart") -> pd.DataFrame:
+    if provider == "dukascopy":
+        data = fetch_15m_dukascopy([pair], period_days=period_days, timeout=max(timeout, 60))
+        if pair not in data:
+            raise ValueError(f"No Dukascopy data for {pair}")
+        return data[pair]
     symbol = YAHOO_SYMBOLS[pair]
     period2 = int(time.time())
     # Yahoo limits 15m intraday history to roughly 60 days; keep a safety margin.
@@ -51,6 +60,33 @@ def fetch_15m(pair: str, period_days: int = 30, timeout: int = 20, retries: int 
     close = result["indicators"]["quote"][0]["close"]
     df = pd.DataFrame({pair: close}, index=idx).dropna()
     return df[~df.index.duplicated(keep="last")]
+
+
+def fetch_15m_dukascopy(pairs: list[str], period_days: int = 365, timeout: int = 60) -> dict[str, pd.DataFrame]:
+    """Fetch long-history M15 bid candles through the Dukascopy Node client.
+
+    This is intentionally separate from the live Yahoo provider: the strategy
+    backtest can use a materially longer history without making the live alert
+    workflow dependent on a heavy historical download.
+    """
+    end = datetime.now(timezone.utc).date()
+    start = end - timedelta(days=int(period_days))
+    cmd = [
+        "node", "scripts/fetch_dukascopy.mjs",
+        "--from", start.isoformat(), "--to", end.isoformat(),
+        "--pairs", ",".join(pairs),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=True)
+    payload = json.loads(proc.stdout)
+    out = {}
+    for pair, rows in payload.items():
+        if not rows:
+            continue
+        df = pd.DataFrame(rows)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+        df = df.set_index("timestamp").sort_index()
+        out[pair] = df[["close"]].rename(columns={"close": pair}).dropna()
+    return out
 
 
 def build_timeframes(m15: pd.DataFrame, as_of: pd.Timestamp | None = None) -> dict[str, pd.DataFrame]:
