@@ -21,6 +21,8 @@ jobs:
   backtest:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      PYTHONPATH: src
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,8 +37,6 @@ jobs:
         run: pytest -q
       - name: Run historical audit
         run: python -m forex_alert.backtest
-        env:
-          PYTHONPATH: src
       - name: Upload backtest
         uses: actions/upload-artifact@v4
         with:
