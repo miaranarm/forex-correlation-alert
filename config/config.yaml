@@ -44,6 +44,7 @@ alerts:
 
 data:
   provider: yahoo_chart
-  period_days: 59
+  period_days: 365
+  backtest_provider: dukascopy
   request_timeout_seconds: 20
   minimum_available_pairs: 8
