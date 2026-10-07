@@ -3,6 +3,7 @@ correlation:
   window: 96
   method: pearson
   min_observations: 60
+  primary_requires_threshold: true
 
 timeframes:
   primary: H4
@@ -16,6 +17,7 @@ scoring:
   h1_weight: 20
   m15_weight: 15
   minimum_alert_score: 65
+  minimum_confluence: H4_ONLY
 
 alerts:
   enabled: true
