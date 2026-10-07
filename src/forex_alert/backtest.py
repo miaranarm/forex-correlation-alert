@@ -112,15 +112,36 @@ def _add_forward_outcomes(rows: list[dict], h4: pd.DataFrame, pos: int):
     for row in rows:
         a, b = row["pair_a"], row["pair_b"]
         expected = 1 if row["correlation_h4"] >= 0 else -1
+        base_a = base[a]
+        base_b = base[b]
+        base_valid = (
+            pd.notna(base_a)
+            and pd.notna(base_b)
+            and float(base_a) != 0.0
+            and float(base_b) != 0.0
+        )
         for label, steps in horizons.items():
             future_pos = pos + steps
             if future_pos >= len(h4):
                 row[f"relationship_correct_{label}"] = None
                 row[f"spread_{label}"] = None
                 continue
+
             future = h4.iloc[future_pos]
-            pa = float(future[a] / base[a] - 1)
-            pb = float(future[b] / base[b] - 1)
+            future_a = future[a]
+            future_b = future[b]
+            future_valid = pd.notna(future_a) and pd.notna(future_b)
+
+            # Missing or invalid prices must remain unknown. They must never
+            # be converted into a False outcome merely because NaN comparisons
+            # evaluate to False in Python.
+            if not base_valid or not future_valid:
+                row[f"relationship_correct_{label}"] = None
+                row[f"spread_{label}"] = None
+                continue
+
+            pa = float(future_a / base_a - 1)
+            pb = float(future_b / base_b - 1)
             product = pa * pb
             row[f"relationship_correct_{label}"] = bool(
                 product > 0 if expected == 1 else product < 0
