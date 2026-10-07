@@ -32,3 +32,10 @@ def test_pair_correlation_rejects_constant_series():
     from forex_alert.correlation import pair_correlation
     x = pd.DataFrame({"a": [1.0] * 100, "b": list(range(100))})
     assert pd.isna(pair_correlation(x, "a", "b", window=96, min_observations=60))
+
+
+def test_confluence_minimum_is_enforced():
+    from forex_alert.scoring import confluence_meets_minimum
+    assert confluence_meets_minimum("H4_ONLY", "H4_ONLY")
+    assert not confluence_meets_minimum("H4_ONLY", "H4_H1")
+    assert confluence_meets_minimum("FULL", "H4_H1")
