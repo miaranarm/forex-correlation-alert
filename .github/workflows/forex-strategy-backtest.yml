@@ -1,5 +1,6 @@
 name: Forex Signal Strategy Backtest
 # Trigger strategy validation with the current long-history Dukascopy configuration.
+# Re-run after train-only 3-fold selection hardening.
 
 on:
   workflow_dispatch:
