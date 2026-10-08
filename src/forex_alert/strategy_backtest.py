@@ -231,6 +231,12 @@ def run():
         for fold in train_folds:
             trade_rows = []
             next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
+            # A fold must be evaluated only with prices that existed inside that
+            # fold. Otherwise a trade opened near the fold boundary can consume
+            # future bars from the next fold, contaminating the chronological
+            # 3-fold TRAIN selection. The final TEST/HOLDOUT evaluation remains
+            # completely outside this selection loop.
+            fold_end = pd.Timestamp(fold["entry_ts"].max()) if not fold.empty else None
             for _, sig in fold.iterrows():
                 if abs(float(sig["spread_zscore"])) < z_entry:
                     continue
@@ -241,6 +247,10 @@ def run():
                 z = float(sig["spread_zscore"])
                 direction = ("LONG" if z > 0 else "SHORT") if signal_mode == "momentum" else ("SHORT" if z > 0 else "LONG")
                 exit_data = m15.loc[m15.index >= entry_ts, pair].dropna()
+                if fold_end is not None:
+                    exit_data = exit_data.loc[exit_data.index <= fold_end]
+                if len(exit_data) < 2:
+                    continue
                 exit_type, r, tp1_hit = _simulate(exit_data, direction, candidate_cfg)
                 max_bars = int(candidate_cfg["strategy"].get("max_bars", len(exit_data)))
                 next_free[pair] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
