@@ -39,7 +39,7 @@ strategy:
   z_entry: 1.5
 
 alerts:
-  enabled: false
+  enabled: true
   console: true
 
 data:
