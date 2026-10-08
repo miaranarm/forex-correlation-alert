@@ -1,5 +1,11 @@
 {
+  "GBPUSD|AUDUSD": {
+    "score": 71.32
+  },
+  "EURUSD|NZDUSD": {
+    "score": 70.39
+  },
   "EURUSD|GBPUSD": {
-    "score": 67.41
+    "score": 67.38
   }
 }
