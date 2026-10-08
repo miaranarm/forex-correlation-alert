@@ -4,6 +4,7 @@ import json
 from itertools import combinations, product
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from .config import load_config
@@ -62,7 +63,7 @@ def _signal_at(frames, ts, a, b, cfg, weights):
         return None
     zscore = float((residual.iloc[-1] - mean) / std)
     # Generate the broadest candidate event set; the actual threshold is selected on TRAIN only.
-    z_entry = min(float(cfg["strategy"].get("z_entry", 1.5)), 1.25)
+    z_entry = min(float(cfg["strategy"].get("z_entry", 1.5)), 1.0)
     if abs(zscore) < z_entry:
         return None
     return {
@@ -212,39 +213,51 @@ def run():
         (0.0020, 0.0025),
     )
     candidates = []
-    train_raw = raw[raw["sample"] == "TRAIN"] if not raw.empty else pd.DataFrame()
+    train_raw = raw[raw["sample"] == "TRAIN"].sort_values("signal_ts") if not raw.empty else pd.DataFrame()
+    # Selection uses chronological 3-fold validation inside TRAIN only.
+    train_folds = [x for x in np.array_split(train_raw, 3) if not x.empty]
     for signal_mode, z_entry, sl, tp1, tp2, trail in grid:
         if tp1 <= sl or tp2 <= tp1:
             continue
         candidate_cfg = dict(cfg)
         candidate_cfg["strategy"] = dict(base)
         candidate_cfg["strategy"].update({
-            "signal_mode": signal_mode, "z_entry": 1.25, "stop_loss_pct": sl, "tp1_pct": tp1,
+            "signal_mode": signal_mode, "z_entry": z_entry, "stop_loss_pct": sl, "tp1_pct": tp1,
             "tp2_pct": tp2, "trailing_stop_pct": trail,
         })
         if train_raw.empty:
             continue
-        trade_rows = []
-        next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
-        for _, sig in train_raw.sort_values("signal_ts").iterrows():
-            if abs(float(sig["spread_zscore"])) < z_entry:
-                continue
-            entry_ts = pd.Timestamp(sig["entry_ts"])
-            pair = sig["pair"]
-            if entry_ts < next_free[pair]:
-                continue
-            z = float(sig["spread_zscore"])
-            direction = ("LONG" if z > 0 else "SHORT") if signal_mode == "momentum" else ("SHORT" if z > 0 else "LONG")
-            exit_data = m15.loc[m15.index >= entry_ts, pair].dropna()
-            exit_type, r, tp1_hit = _simulate(exit_data, direction, candidate_cfg)
-            max_bars = int(candidate_cfg["strategy"].get("max_bars", len(exit_data)))
-            next_free[pair] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
-            trade_rows.append({"r": r, "tp1": tp1_hit})
-        metrics = _metrics(pd.DataFrame(trade_rows))
-        if metrics.get("trades", 0) >= 6:
-            candidates.append((metrics.get("expectancy_r", -999), metrics.get("profit_factor") or -999, metrics.get("trades", 0), candidate_cfg["strategy"]))
+        fold_metrics = []
+        for fold in train_folds:
+            trade_rows = []
+            next_free = {pair: pd.Timestamp.min.tz_localize("UTC") for pair in available}
+            for _, sig in fold.iterrows():
+                if abs(float(sig["spread_zscore"])) < z_entry:
+                    continue
+                entry_ts = pd.Timestamp(sig["entry_ts"])
+                pair = sig["pair"]
+                if entry_ts < next_free[pair]:
+                    continue
+                z = float(sig["spread_zscore"])
+                direction = ("LONG" if z > 0 else "SHORT") if signal_mode == "momentum" else ("SHORT" if z > 0 else "LONG")
+                exit_data = m15.loc[m15.index >= entry_ts, pair].dropna()
+                exit_type, r, tp1_hit = _simulate(exit_data, direction, candidate_cfg)
+                max_bars = int(candidate_cfg["strategy"].get("max_bars", len(exit_data)))
+                next_free[pair] = entry_ts + pd.Timedelta(minutes=15 * max_bars)
+                trade_rows.append({"r": r, "tp1": tp1_hit})
+            fold_metrics.append(_metrics(pd.DataFrame(trade_rows)))
+        if len(fold_metrics) == 3 and all(m.get("trades", 0) >= 6 for m in fold_metrics):
+            exps = [m.get("expectancy_r", -999.0) for m in fold_metrics]
+            pfs = [m.get("profit_factor", -999.0) if m.get("profit_factor") is not None else -999.0 for m in fold_metrics]
+            candidates.append((
+                float(np.median(exps)),
+                float(np.median(pfs)),
+                float(min(exps)),
+                int(sum(m.get("trades", 0) for m in fold_metrics)),
+                candidate_cfg["strategy"],
+            ))
     if candidates:
-        _, _, _, selected_strategy = max(candidates, key=lambda x: (x[0], x[1], x[2]))
+        _, _, _, _, selected_strategy = max(candidates, key=lambda x: (x[0], x[1], x[2], x[3]))
     else:
         selected_strategy = dict(base)
 
@@ -277,6 +290,7 @@ def run():
         "data_period_days": cfg["data"]["period_days"],
         "strategy": selected_strategy,
         "train_selection_candidates": len(candidates),
+        "train_selection_method": "chronological_3fold_train_median_expectancy_then_median_profit_factor",
         "all": _metrics(df),
         "train": _metrics(df[df["sample"] == "TRAIN"]) if not df.empty else {"trades": 0},
         "test": _metrics(df[df["sample"] == "TEST"]) if not df.empty else {"trades": 0},
