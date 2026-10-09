@@ -1,14 +1,17 @@
 {
-  "EURUSD|GBPUSD": {
-    "score": 80.77
+  "EURJPY|AUDJPY": {
+    "score": 84.01
   },
-  "AUDUSD|NZDUSD": {
-    "score": 72.87
+  "EURUSD|GBPUSD": {
+    "score": 82.7
   },
   "GBPUSD|AUDUSD": {
-    "score": 70.0
+    "score": 70.66
   },
   "EURUSD|AUDUSD": {
-    "score": 67.74
+    "score": 67.81
+  },
+  "EURUSD|NZDUSD": {
+    "score": 67.32
   }
 }
